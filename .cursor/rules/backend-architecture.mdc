@@ -1,0 +1,43 @@
+---
+description: Backend architecture, tech stack, and conventions for the server-side
+globs: server/**/*.js
+alwaysApply: false
+---
+
+# Backend Architecture & Conventions
+
+## 1. Architecture
+- **Type:** Monolith
+- **Overview:** A single Express.js application handling all backend responsibilities, including API routing, database interactions, and business logic.
+- **Structure:** Modular structure separating routes, controllers, and database configuration.
+
+## 2. Tech Stack
+- **Language:** JavaScript (Node.js, ES Modules)
+- **Framework:** Express.js
+- **Database:** PostgreSQL (via `pg` package)
+- **Tools:** `dotenv` for environment variables, `cors` for Cross-Origin Resource Sharing, `nodemon` for development.
+
+## 3. API Design
+- **Style:** RESTful API
+- **Base URL:** `/api`
+- **Format:** JSON payloads (`express.json()`)
+- **Conventions:** Standard HTTP methods (GET, POST, PUT, DELETE) and status codes.
+
+## 4. Database
+- **Type:** Relational (PostgreSQL)
+- **Connection:** Connection pooling via `pg.Pool`
+- **Schema Basics:** Structured tables with primary keys, foreign keys for relationships.
+- **Initialization:** Managed via custom scripts (`db_init/init.js`).
+
+## 5. Authentication & Authorization
+- **Method:** JWT (JSON Web Tokens) *(Assumed)*
+- **Transport:** HTTP Authorization header (`Bearer <token>`) *(Assumed)*
+- **Roles:** Role-based access control (RBAC) for standard users and admins *(Assumed)*.
+
+## 6. Business Logic
+- **Responsibilities:** Data validation, CRUD operations, error handling, and formatting responses.
+- **Separation:** Keep route definitions clean by delegating complex logic to controller or service modules.
+
+## 7. Integrations
+- **External APIs:** Standard REST/HTTP calls for third-party services *(Assumed)*.
+- **Environment:** API keys and secrets strictly managed via `.env`.

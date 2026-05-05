@@ -1,0 +1,47 @@
+---
+description: Client-side (frontend) architecture and conventions
+globs: client/**/*
+alwaysApply: false
+---
+
+# Frontend Architecture
+
+This document outlines the architecture, technology stack, and conventions for the client-side (frontend) of the project.
+
+## 1. Overall Architecture Overview
+The frontend is built as a Single Page Application (SPA) using vanilla web technologies. It is designed to be lightweight, modular, and cleanly separated from the backend, communicating exclusively via a RESTful API.
+
+## 2. Technology Stack & Responsibilities
+- **HTML**: Provides the semantic structure of the application.
+- **CSS**: Handles all styling. We use a modular/structured approach. **No inline styles** are allowed.
+- **JavaScript (Vanilla)**: Manages all client-side logic, including DOM manipulation, state management, routing, and API communication.
+
+## 3. Frontend Structure
+The `client/` directory should be organized modularly:
+- `index.html`: The main entry point for the SPA.
+- `styles/`: Contains all CSS files (e.g., `main.css`, `variables.css`, and component-specific styles).
+- `js/`: Contains all JavaScript logic.
+  - `components/`: Reusable UI elements (e.g., buttons, modals).
+  - `pages/`: Logic specific to individual views/pages.
+  - `api/`: Modules for backend communication.
+  - `utils/`: Helper functions and utilities.
+  - `app.js`: Main application initialization and routing setup.
+
+## 4. API Communication
+- **Tool**: Use the native `fetch` API for all HTTP requests.
+- **Flow**: Use `async/await` syntax for asynchronous operations.
+- **Centralization**: API calls should be abstracted into dedicated services (inside `js/api/`) rather than scattered throughout UI components.
+- **Error Handling**: Implement robust `try/catch` blocks. Always check `response.ok` and handle network errors gracefully, providing user-friendly feedback.
+
+## 5. State Management
+- **Approach**: State is managed via centralized JavaScript objects or modules.
+- **Updates**: Changes to the state should trigger UI updates through dedicated render functions or custom event listeners, keeping the DOM synchronized with the underlying data.
+
+## 6. Routing Strategy
+- **SPA Routing**: Use the browser's History API (`pushState`, `replaceState`, `popstate` event) or Hash-based routing to navigate between different views without reloading the page.
+- **View Rendering**: A central router should intercept link clicks, update the URL, and dynamically load the corresponding HTML/JS for the requested view into the main container.
+
+## 7. Best Practices & Conventions
+- **Separation of Concerns**: Keep HTML, CSS, and JS strictly separated. Do not mix logic into HTML (e.g., no `onclick` attributes) or styles into JS (unless dynamically calculating layout).
+- **Modularity**: Break down complex UI into smaller, reusable JavaScript functions or classes.
+- **Performance**: Minimize DOM reflows and repaints by batching DOM updates (e.g., using `DocumentFragment`).
