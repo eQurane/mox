@@ -1,9 +1,15 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import healthRouter from './routes/health.js';
+import authRouter from './routes/auth.js';
 
 dotenv.config();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const clientDir = path.join(__dirname, '..', '..', 'client');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,6 +19,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/api', healthRouter);
+app.use('/api', authRouter);
+app.use(express.static(clientDir));
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
