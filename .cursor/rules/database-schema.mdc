@@ -1,0 +1,39 @@
+---
+description: Схема PostgreSQL БД mox и справочники из db_init/init.js
+globs: server/**/*.js
+alwaysApply: false
+---
+
+# База данных mox
+
+**Источник правды:** `server/db_init/init.js`.
+
+## Окружение
+
+- Подключение: `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD` (дефолты localhost / 5432 / postgres).
+- БД **`mox`** создаётся при отсутствии (через подключение к `postgres`).
+- **`INIT_DATE`** (дефолт `2026-05-01`) встраивается в `CHECK` при `CREATE TABLE`; для живой БД менять схему через миграции/`ALTER`, не полагаясь только на перезапуск init.
+
+## Таблицы и связи
+
+- **`roles`** — `id`, `name`, `description`.
+- **`statuses_*`** (`users`, `projects`, `tasks`, `media`) — `id`, `name` UNIQUE.
+- **`users`** — `name`, `email` UNIQUE, `password`, `registered_at`; `status_id` → `statuses_users`, `role_id` → `roles`. CHECK `registered_at >= INIT_DATE`.
+- **`projects`** — `name`, `goal`, `start_date`, `end_date`, `status_id` → `statuses_projects`. CHECK `start_date >= INIT_DATE`, `end_date > start_date`.
+- **`tasks`** — `name`, `description`, `deadline`; `role_id` → `roles`, `project_id` → `projects`, `status_id` → `statuses_tasks`. CHECK `deadline >= INIT_DATE`.
+- **`collections`** — `name`, `description`, `created_at`, `last_edited_at`, `task_id` → `tasks`. CHECK на `INIT_DATE` и `last_edited_at >= created_at`.
+- **`media`** — `path`, `name`, `format`, `description`, `upload_at`; `status_id` → `statuses_media`, `collection_id` → `collections`.
+- **`comments`** — `text`, `created_at`; `user_id` → `users`, `media_id` → `media`.
+- **`user_project`** — `user_id` → `users`, `project_id` → `projects`, `included_at`, `excluded_at` (nullable).
+
+Индексы: на всех FK из скрипта + `idx_comments_created_at`.
+
+## Seed (справочники)
+
+- **roles:** Админ, Менеджер, Исполнитель, Внешний подрядчик, Клиент (+ описания в коде).
+- **statuses_users:** На подтверждении, Активный, Отключён.
+- **statuses_projects:** Запланированный, Активный, Приостановленный, Завершенный.
+- **statuses_tasks:** К выполнению, В работе, На проверке, Выполнено, Отменено.
+- **statuses_media:** Активный, Удалённый, Архивный.
+
+Изменяя схему, синхронизируй `init.js` и это правило.

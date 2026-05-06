@@ -15,6 +15,7 @@ alwaysApply: false
 - **Language:** JavaScript (Node.js, ES Modules)
 - **Framework:** Express.js
 - **Database:** PostgreSQL (via `pg` package)
+- **Passwords:** `bcryptjs` for registration hashes
 - **Tools:** `dotenv` for environment variables, `cors` for Cross-Origin Resource Sharing, `nodemon` for development.
 
 ## 3. API Design
@@ -30,14 +31,14 @@ alwaysApply: false
 - **Initialization:** Managed via custom scripts (`db_init/init.js`).
 
 ## 5. Authentication & Authorization
-- **Method:** JWT (JSON Web Tokens) *(Assumed)*
-- **Transport:** HTTP Authorization header (`Bearer <token>`) *(Assumed)*
-- **Roles:** Role-based access control (RBAC) for standard users and admins *(Assumed)*.
+- **Implemented:** password hashing with `bcryptjs` on registration (`POST /api/auth/register`); roles loaded from DB (`GET /api/auth/register-options`). See `.cursor/rules/backend-api.mdc`.
+- **Not implemented yet:** JWT/sessions, `Authorization` header, protected routes.
+- **Dev note:** any `roleId` from `roles` is accepted on register; lock this down before production.
 
 ## 6. Business Logic
 - **Responsibilities:** Data validation, CRUD operations, error handling, and formatting responses.
 - **Separation:** Keep route definitions clean by delegating complex logic to controller or service modules.
 
 ## 7. Integrations
-- **External APIs:** Standard REST/HTTP calls for third-party services *(Assumed)*.
-- **Environment:** API keys and secrets strictly managed via `.env`.
+- **External APIs:** add as needed; use `.env` for secrets.
+- **Environment:** database and server config via `.env` in `server/` (see `backend-api.mdc`).

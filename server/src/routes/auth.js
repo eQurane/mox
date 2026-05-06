@@ -1,5 +1,6 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import pool from '../db.js';
 
 /**
@@ -8,8 +9,18 @@ import pool from '../db.js';
  */
 
 const REGISTER_USER_STATUS = process.env.REGISTER_USER_STATUS || 'Активный';
+const ACTIVE_USER_STATUS = 'Активный';
 const PASSWORD_MIN_LENGTH = 8;
 const BCRYPT_COST = 10;
+
+const isProd = process.env.NODE_ENV === 'production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (isProd && !JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET is required in production.');
+  process.exit(1);
+}
+const jwtSecret = JWT_SECRET || 'dev-local-only-insecure-secret';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 const router = express.Router();
 
@@ -17,6 +28,16 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function badRequest(res, message) {
   res.status(400).json({ error: message });
+}
+
+function unauthorized(res) {
+  res.status(401).json({ error: 'Неверный email или пароль.' });
+}
+
+function bearerToken(req) {
+  const h = req.headers.authorization;
+  if (typeof h !== 'string' || !h.startsWith('Bearer ')) return null;
+  return h.slice(7).trim() || null;
 }
 
 router.get('/auth/register-options', async (req, res) => {
@@ -90,6 +111,109 @@ router.post('/auth/register', async (req, res) => {
     }
     console.error(err);
     return res.status(500).json({ error: 'Не удалось зарегистрироваться.' });
+  }
+});
+
+router.post('/auth/login', async (req, res) => {
+  const { email, password } = req.body ?? {};
+
+  if (typeof email !== 'string' || !email.trim()) {
+    return badRequest(res, 'Укажите email.');
+  }
+  if (!emailPattern.test(email.trim())) {
+    return badRequest(res, 'Некорректный email.');
+  }
+  if (typeof password !== 'string' || !password.length) {
+    return badRequest(res, 'Укажите пароль.');
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  let row;
+  try {
+    const result = await pool.query(
+      `SELECT u.id, u.name, u.email, u.password, u.role_id, su.name AS status_name
+       FROM users u
+       JOIN statuses_users su ON su.id = u.status_id
+       WHERE u.email = $1`,
+      [normalizedEmail],
+    );
+    row = result.rows[0];
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Не удалось выполнить вход.' });
+  }
+
+  if (!row || !row.password) {
+    return unauthorized(res);
+  }
+
+  const match = await bcrypt.compare(password, row.password);
+  if (!match) {
+    return unauthorized(res);
+  }
+
+  if (row.status_name === 'Отключён') {
+    return res.status(403).json({ error: 'Доступ запрещён.' });
+  }
+  if (row.status_name === 'На подтверждении') {
+    return res.status(403).json({ error: 'Учётная запись ещё не активирована.' });
+  }
+  if (row.status_name !== ACTIVE_USER_STATUS) {
+    return res.status(403).json({ error: 'Вход с этим статусом учётной записи невозможен.' });
+  }
+
+  const token = jwt.sign({ sub: String(row.id), roleId: row.role_id }, jwtSecret, {
+    expiresIn: JWT_EXPIRES_IN,
+  });
+
+  return res.json({
+    token,
+    user: {
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      roleId: row.role_id,
+    },
+  });
+});
+
+router.get('/auth/me', async (req, res) => {
+  const raw = bearerToken(req);
+  if (!raw) {
+    return res.status(401).json({ error: 'Требуется авторизация.' });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(raw, jwtSecret);
+  } catch {
+    return res.status(401).json({ error: 'Сессия недействительна.' });
+  }
+
+  const userId = Number(payload.sub);
+  if (!Number.isInteger(userId) || userId < 1) {
+    return res.status(401).json({ error: 'Сессия недействительна.' });
+  }
+
+  try {
+    const result = await pool.query(
+      'SELECT id, name, email, role_id FROM users WHERE id = $1',
+      [userId],
+    );
+    const row = result.rows[0];
+    if (!row) {
+      return res.status(401).json({ error: 'Пользователь не найден.' });
+    }
+    return res.json({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      roleId: row.role_id,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Не удалось загрузить профиль.' });
   }
 });
 

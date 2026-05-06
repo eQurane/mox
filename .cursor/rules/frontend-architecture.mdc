@@ -1,47 +1,65 @@
 ---
-description: Client-side (frontend) architecture and conventions
+description: SPA-клиент Mox структура, роутинг, API и рендер
 globs: client/**/*
 alwaysApply: false
 ---
 
-# Frontend Architecture
+# Frontend (документация клиента)
 
-This document outlines the architecture, technology stack, and conventions for the client-side (frontend) of the project.
+Одностраничное приложение: HTML + CSS + **ванильный ES modules**, общение с бэкендом только через **REST**, префикс **`/api`**.
 
-## 1. Overall Architecture Overview
-The frontend is built as a Single Page Application (SPA) using vanilla web technologies. It is designed to be lightweight, modular, and cleanly separated from the backend, communicating exclusively via a RESTful API.
+## Точка входа и оболочка
 
-## 2. Technology Stack & Responsibilities
-- **HTML**: Provides the semantic structure of the application.
-- **CSS**: Handles all styling. We use a modular/structured approach. **No inline styles** are allowed.
-- **JavaScript (Vanilla)**: Manages all client-side logic, including DOM manipulation, state management, routing, and API communication.
+- **`index.html`**: монтирование в `#app`; стили `/styles/main.css`; скрипт `type="module"` → `/js/app.js`; пути абсолютные от корня статики сервера.
 
-## 3. Frontend Structure
-The `client/` directory should be organized modularly:
-- `index.html`: The main entry point for the SPA.
-- `styles/`: Contains all CSS files (e.g., `main.css`, `variables.css`, and component-specific styles).
-- `js/`: Contains all JavaScript logic.
-  - `components/`: Reusable UI elements (e.g., buttons, modals).
-  - `pages/`: Logic specific to individual views/pages.
-  - `api/`: Modules for backend communication.
-  - `utils/`: Helper functions and utilities.
-  - `app.js`: Main application initialization and routing setup.
+## Роутинг (`js/app.js`)
 
-## 4. API Communication
-- **Tool**: Use the native `fetch` API for all HTTP requests.
-- **Flow**: Use `async/await` syntax for asynchronous operations.
-- **Centralization**: API calls should be abstracted into dedicated services (inside `js/api/`) rather than scattered throughout UI components.
-- **Error Handling**: Implement robust `try/catch` blocks. Always check `response.ok` and handle network errors gracefully, providing user-friendly feedback.
+| Аспект | Как устроено |
+|--------|----------------|
+| Механизм | Hash: `#/маршрут` |
+| Событие | `hashchange` + первый вызов при загрузке |
+| Нормализация | `location.hash` без ведущего `#/`; пустой hash → эквивалент `register` |
+| Дефолт | Если hash пуст или `#`, `history.replaceState` на `#/register` |
+| Корень DOM | `#app` (`getElementById('app')`) |
+| Неизвестный путь | Сообщение «Страница не найдена» с классами `.page`, `.message`, `.message_error` |
 
-## 5. State Management
-- **Approach**: State is managed via centralized JavaScript objects or modules.
-- **Updates**: Changes to the state should trigger UI updates through dedicated render functions or custom event listeners, keeping the DOM synchronized with the underlying data.
+Пример добавления страницы: ветка в том же `route()` после нормализации пути → вызов `render…Page(appRoot)` из `js/pages/…`.
 
-## 6. Routing Strategy
-- **SPA Routing**: Use the browser's History API (`pushState`, `replaceState`, `popstate` event) or Hash-based routing to navigate between different views without reloading the page.
-- **View Rendering**: A central router should intercept link clicks, update the URL, and dynamically load the corresponding HTML/JS for the requested view into the main container.
+## Структура `client/`
 
-## 7. Best Practices & Conventions
-- **Separation of Concerns**: Keep HTML, CSS, and JS strictly separated. Do not mix logic into HTML (e.g., no `onclick` attributes) or styles into JS (unless dynamically calculating layout).
-- **Modularity**: Break down complex UI into smaller, reusable JavaScript functions or classes.
-- **Performance**: Minimize DOM reflows and repaints by batching DOM updates (e.g., using `DocumentFragment`).
+```
+client/
+  index.html
+  styles/          # общие стили; без инлайнов в разметке/JS там, где это не нужно для вычисляемого layout
+  js/
+    app.js         # только bootstrap и роутер
+    pages/         # один файл — один экран, экспорт рендер-функции
+    api/           # обёртки fetch, общие хелперы ответов
+```
+
+Каталоги `js/components/` и `js/utils/` — по мере появления повторения; локальный хелпер `el()` внутри страницы допустим, как в регистрации.
+
+## Слой API (`js/api/`)
+
+- Базовый URL: **`/api`** (константа вроде `apiBase`).
+- **`fetch`** + **`async/await`**; после ответа — **`response.ok`**; парсинг JSON в try/catch; при ошибке — **`throw new Error(...)`** с понятным **русским** текстом (из тела при наличии, иначе запасное сообщение).
+
+```javascript
+// ✅ паттерн
+const res = await fetch(`${apiBase}/…`);
+const data = await parseJsonSafe(res);
+if (!res.ok) throw new Error(data.error || '…');
+```
+
+Не разносить «голый» `fetch` по страницам — только через модули `js/api/`.
+
+## Страницы (`js/pages/`)
+
+- Экспорт: **`render…Page(container)`** (может быть `async`).
+- Контент: сборка через DOM API; сообщения статуса/ошибки — блоки с `.message`, модификаторы `.message_error` / `.message_ok`; где уместно — **`aria-live`**.
+
+## Анти-паттерны
+
+- Инлайновые обработчики в HTML (`onclick` и т.д.).
+- Стили в строках там, где достаточно класса из CSS.
+- Дублирование логики HTTP вне `js/api/`.

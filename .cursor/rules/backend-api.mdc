@@ -1,0 +1,40 @@
+---
+description: Справочник HTTP API, env и ответов сервера mox
+globs: server/**/*.js
+alwaysApply: false
+---
+
+# Документация HTTP API (mox)
+
+**Префикс API:** `/api`. Тело запросов: JSON (`Content-Type: application/json`). Статика фронта: каталог `client/` с того же хоста/порта (`server.js`).
+
+## Переменные окружения
+
+| Переменная | Модуль | Назначение |
+|------------|--------|------------|
+| `PORT` | `server.js` | Порт (по умолчанию `3000`). |
+| `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASSWORD` | `db.js` | Пул PostgreSQL; имя БД по умолчанию `mox`. |
+| `REGISTER_USER_STATUS` | `routes/auth.js` | Имя строки в `statuses_users` для нового пользователя (по умолчанию `Активный`). |
+
+## Эндпоинты
+
+```http
+GET  /api/health              → { status, timestamp }
+GET  /api/health/db           → БД + список таблиц или 500
+GET  /api/auth/register-options → { roles: [{ id, name }] }
+POST /api/auth/register       → 201 | 400 | 409 | 500
+```
+
+### POST `/api/auth/register`
+
+**Body:** `name` (string), `email` (string), `password` (string), `roleId` (number).
+
+**Поведение:** trim имени; email в lower case; пароль ≥ 8 символов; `roleId` — целое ≥ 1 и существует в `roles`; хеш `bcryptjs` (cost `10`). Статус берётся по `REGISTER_USER_STATUS`.
+
+**201:** `{ id, name, email, roleId }`.
+
+**Ошибки (JSON):** `400` — валидация; `409` — дубликат `email`; `500` — БД или неизвестный статус пользователя.
+
+**⚠️ Dev:** клиент может указать любую роль из БД; перед продакшеном ограничить whitelist.
+
+Схему таблиц см. `.cursor/rules/database-schema.mdc`.
