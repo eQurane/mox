@@ -15,7 +15,7 @@ alwaysApply: true
 - `src/middleware/auth.js` — `Bearer`-токен, `requireAuth`.
 - `src/routes/health.js` — health и проверка БД.
 - `src/routes/auth.js` — регистрация, логин, JWT, `/auth/me`.
-- `src/routes/projects.js` — список проектов (защищённый маршрут).
+- `src/routes/projects.js` — список проектов, опции формы создания (`GET …/create-options`), создание (`POST`, в т.ч. `user_project`).
 - `db_init/init.js` — создание БД и схемы, seed справочников.
 - `package.json` — зависимости и скрипты серверной части.
 
@@ -25,7 +25,7 @@ alwaysApply: true
 - `styles/` — общие стили (например `main.css`).
 - `js/app.js` — bootstrap и hash-роутер.
 - `js/pages/` — экраны: `home`, `login`, `register`, `admin`, `projectNew`, `projectDetail` и др.
-- `js/api/` — обёртки `fetch` к `/api` (`auth.js`, `projects.js`).
+- `js/api/` — обёртки `fetch` к `/api` (`auth.js`; `projects.js` — `fetchProjects`, `createProject`).
 - `js/auth/session.js` — токен и снимок пользователя в `sessionStorage`.
 - `icons/` — SVG-иконки (при необходимости).
 

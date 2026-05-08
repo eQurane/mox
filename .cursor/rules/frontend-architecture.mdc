@@ -40,7 +40,7 @@ alwaysApply: false
 ### Ограничения по ролям (снимок из `sessionStorage`)
 
 - **`#/admin`:** только `roleName === 'Админ'`; иначе редирект на `#/home`.
-- **`#/projects/new`:** только **Админ** и **Менеджер**; иначе редирект на `#/home`.
+- **`#/projects/new`:** только **Админ** и **Менеджер**; иначе редирект на `#/home`. Экран **`projectNew.js`:** перед формой вызывается **`fetchProjectCreateOptions`** (`statuses` + `assignableUsers` по правилам роли); ширина блока через **`project-new-page`**; шапка с «назад» (`client/icons/back-24.svg`). Поля: название, цель; **статус** (`select`); даты (**`min`/`max`**); блок **«Участники»** — чекбоксы по списку сервера, подсказка по ролям (админ может назначить ещё менеджеров), текст про автоматическое включение **создателя** в `user_project`; **`createProject`** передаёт `statusId`, `participantIds`; при успехе — **`#/project/:id`**. Ошибки — **`.field--error`** (`main.css`).
 
 Пример добавления страницы: ветка в том же `route()` после нормализации пути → вызов `render…Page(appRoot)` из `js/pages/…`.
 
@@ -79,7 +79,7 @@ client/
 
 - Базовый URL: **`/api`** (константа `apiBase` в модулях).
 - **`auth.js`:** `fetchRegisterOptions`, `register`, `login`, `fetchMe` (для `fetchMe` — заголовок `Authorization: Bearer` через `getToken()`).
-- **`projects.js`:** `fetchProjects` с Bearer-токеном.
+- **`projects.js`:** `fetchProjects`, **`fetchProjectCreateOptions`**, **`createProject`** (Bearer; `create-options` и `POST` — для ролей создания проекта на сервере).
 - **`fetch`** + **`async/await`**; **`parseJsonSafe`**; при ошибке — **`throw new Error(...)`** с понятным **русским** текстом (из тела при наличии).
 
 ```javascript

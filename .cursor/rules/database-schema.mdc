@@ -24,7 +24,7 @@ alwaysApply: false
 - **`collections`** — `name`, `description`, `created_at`, `last_edited_at`, `task_id` → `tasks`. CHECK на `INIT_DATE` и `last_edited_at >= created_at`.
 - **`media`** — `path`, `name`, `format`, `description`, `upload_at`; `status_id` → `statuses_media`, `collection_id` → `collections`.
 - **`comments`** — `text`, `created_at`; `user_id` → `users`, `media_id` → `media`.
-- **`user_project`** — `user_id` → `users`, `project_id` → `projects`, `included_at`, `excluded_at` (nullable).
+- **`user_project`** — `user_id` → `users`, `project_id` → `projects`, `included_at`, `excluded_at` (nullable). При **`POST /api/projects`** в одной транзакции создаётся запись для **создателя** проекта и для каждого переданного участника (не дублируя `user_id` создателя).
 
 Индексы: на всех FK из скрипта + `idx_comments_created_at`.
 

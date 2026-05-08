@@ -20,6 +20,7 @@ alwaysApply: false
 | `JWT_SECRET` | `jwtSecret.js` | Секрет подписи JWT; в dev допускается не задавать (используется небезопасный запасной вариант). |
 | `JWT_EXPIRES_IN` | `jwtSecret.js` | Срок жизни JWT (строка для `jsonwebtoken`, по умолчанию `7d`). |
 | `REGISTER_USER_STATUS` | `routes/auth.js` | Имя строки в `statuses_users` для нового пользователя (по умолчанию `Активный`). |
+| `INIT_DATE` | `db_init/init.js`, `routes/projects.js` | Нижняя граница дат по CHECK в схеме и при валидации `POST /api/projects` (дефолт `2026-05-01`; должен совпадать с тем, что зашито в БД при создании таблиц). |
 
 ## Эндпоинты
 
@@ -31,7 +32,19 @@ POST /api/auth/register              → 201 | 400 | 409 | 500
 POST /api/auth/login                 → 200 | 400 | 401 | 403 | 500
 GET  /api/auth/me                    → 200 | 401 | 500  (Bearer)
 GET  /api/projects                   → 200 | 401 | 500  (Bearer)
+GET  /api/projects/create-options     → 200 | 401 | 403 | 500  (Bearer)
+POST /api/projects                   → 201 | 400 | 401 | 403 | 500  (Bearer)
 ```
+
+### GET `/api/projects/create-options`
+
+**Заголовок:** `Authorization: Bearer <token>`.
+
+**Доступ:** только **Админ** и **Менеджер**; иначе **`403`**.
+
+**200:** `{ statuses: [{ id, name }], assignableUsers: [{ id, name, email, roleName }] }` — статусы проектов из `statuses_projects` (порядок по `id`). Список пользователей: только со статусом учётной записи **«Активный»**; **текущего пользователя нет** в списке. Роли в выдаче: для **Менеджера** — только **Исполнитель** и **Клиент**; для **Админа** — ещё и **Менеджер**.
+
+**Ошибки:** `401`, `403`, `500`.
 
 ### POST `/api/auth/register`
 
@@ -72,5 +85,19 @@ GET  /api/projects                   → 200 | 401 | 500  (Bearer)
 **Видимость:** роли **Админ** и **Менеджер** — все проекты; остальные — только проекты, где пользователь есть в `user_project` и `excluded_at IS NULL`.
 
 **Ошибки:** `401`, `500`.
+
+### POST `/api/projects`
+
+**Заголовок:** `Authorization: Bearer <token>`.
+
+**Доступ:** только роли **Админ** и **Менеджер**; иначе **`403`**.
+
+**Body:** `name` (string), `goal` (string), `startDate` (string), `endDate` (string) — даты **`YYYY-MM-DD`**; **`statusId`** (integer) — `statuses_projects.id`; **`participantIds`** (массив integer) — необязательный, уникальные id пользователей (создателя указывать не нужно, он добавляется на сервере).
+
+**Поведение:** trim `name` и `goal`, оба непустые; `endDate` строго позже `startDate`; `startDate` не раньше **`INIT_DATE`**; `participantIds` допускаются только **активные** пользователи с ролью из белого списка (как в **`GET …/create-options`**): для создателя‑**Менеджера** — Исполнитель, Клиент; для создателя‑**Админа** — плюс Менеджер. В транзакции: `INSERT` в `projects`, затем `INSERT` в **`user_project`** для **создателя** и каждого участника (`included_at = NOW()`, `excluded_at IS NULL`).
+
+**201:** `{ project: { id, name, goal, startDate, endDate, statusName } }` — `statusName` из выбранной записи `statuses_projects`.
+
+**Ошибки (JSON):** `400` — валидация; `401` — авторизация; `403` — нет прав на создание или на добавление пользователя с данной ролью; `500` — БД.
 
 Схему таблиц см. `.cursor/rules/database-schema.mdc`.

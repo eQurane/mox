@@ -24,3 +24,38 @@ export async function fetchProjects() {
   }
   return data;
 }
+
+export async function fetchProjectCreateOptions() {
+  const token = getToken();
+  if (!token) {
+    throw new Error('Сессия отсутствует.');
+  }
+  const res = await fetch(`${apiBase}/projects/create-options`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await parseJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(data.error || 'Не удалось загрузить данные формы.');
+  }
+  return data;
+}
+
+export async function createProject(payload) {
+  const token = getToken();
+  if (!token) {
+    throw new Error('Сессия отсутствует.');
+  }
+  const res = await fetch(`${apiBase}/projects`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(data.error || 'Не удалось создать проект.');
+  }
+  return data;
+}

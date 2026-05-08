@@ -32,6 +32,10 @@ body {
   padding: clamp(24px, 5vw, 48px) 16px;
 }
 
+.project-new-page.page {
+  max-width: 680px;
+}
+
 .register-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -44,6 +48,27 @@ body {
   margin: 0 0 8px;
   font-size: 1.65rem;
   font-weight: 650;
+}
+
+.register-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.register-card__header .register-title {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.register-card__header .button {
+  flex-shrink: 0;
+  margin-top: 0;
+  align-self: flex-start;
+  color: var(--text);
 }
 
 .register-muted {
@@ -69,8 +94,15 @@ body {
   color: var(--muted);
 }
 
+.field__legend {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
 .field input,
-.field select {
+.field select,
+.field textarea {
   width: 100%;
   padding: 11px 12px;
   border-radius: 8px;
@@ -80,10 +112,35 @@ body {
   font: inherit;
 }
 
+.field textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+
 .field input:focus,
-.field select:focus {
+.field select:focus,
+.field textarea:focus {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+.field--error label {
+  color: var(--danger);
+}
+
+.field--error .field__legend {
+  color: var(--danger);
+}
+
+.field--error .participant-picker__list {
+  border-color: var(--danger);
+}
+
+.field--error input:not(:focus):not(:focus-visible),
+.field--error select:not(:focus):not(:focus-visible),
+.field--error textarea:not(:focus):not(:focus-visible) {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
 }
 
 .field select {
@@ -147,6 +204,84 @@ body {
 
 .register-footer a:hover {
   text-decoration: underline;
+}
+
+.participant-picker__note {
+  margin: 0 0 8px;
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.participant-picker__creator {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  color: var(--text);
+  background: rgba(37, 99, 235, 0.06);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  border-radius: 8px;
+  line-height: 1.45;
+}
+
+.participant-picker__list {
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fcfcfd;
+}
+
+.participant-picker__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.participant-picker__row + .participant-picker__row {
+  border-top: 1px solid var(--border);
+}
+
+.participant-picker__row:hover {
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.participant-picker__row input {
+  margin-top: 3px;
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--accent);
+}
+
+.participant-picker__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.participant-picker__name {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.participant-picker__email,
+.participant-picker__role {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.participant-picker__empty {
+  margin: 0;
+  padding: 14px 12px;
+  font-size: 0.875rem;
+  color: var(--muted);
 }
 
 .page--wide {
