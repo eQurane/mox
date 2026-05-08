@@ -2,6 +2,8 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../db.js';
+import { jwtSecret, JWT_EXPIRES_IN } from '../jwtSecret.js';
+import { bearerToken } from '../middleware/auth.js';
 
 /**
  * Dev-only policy: any client may pick any role from DB (including "Админ").
@@ -13,15 +15,6 @@ const ACTIVE_USER_STATUS = 'Активный';
 const PASSWORD_MIN_LENGTH = 8;
 const BCRYPT_COST = 10;
 
-const isProd = process.env.NODE_ENV === 'production';
-const JWT_SECRET = process.env.JWT_SECRET;
-if (isProd && !JWT_SECRET) {
-  console.error('FATAL: JWT_SECRET is required in production.');
-  process.exit(1);
-}
-const jwtSecret = JWT_SECRET || 'dev-local-only-insecure-secret';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
-
 const router = express.Router();
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -32,12 +25,6 @@ function badRequest(res, message) {
 
 function unauthorized(res) {
   res.status(401).json({ error: 'Неверный email или пароль.' });
-}
-
-function bearerToken(req) {
-  const h = req.headers.authorization;
-  if (typeof h !== 'string' || !h.startsWith('Bearer ')) return null;
-  return h.slice(7).trim() || null;
 }
 
 router.get('/auth/register-options', async (req, res) => {
@@ -99,11 +86,15 @@ router.post('/auth/register', async (req, res) => {
     );
 
     const row = insert.rows[0];
+    const roleRow = await pool.query('SELECT name FROM roles WHERE id = $1', [row.role_id]);
+    const roleName = roleRow.rows[0]?.name ?? null;
+
     return res.status(201).json({
       id: row.id,
       name: row.name,
       email: row.email,
       roleId: row.role_id,
+      roleName,
     });
   } catch (err) {
     if (err.code === '23505') {
@@ -132,8 +123,9 @@ router.post('/auth/login', async (req, res) => {
   let row;
   try {
     const result = await pool.query(
-      `SELECT u.id, u.name, u.email, u.password, u.role_id, su.name AS status_name
+      `SELECT u.id, u.name, u.email, u.password, u.role_id, r.name AS role_name, su.name AS status_name
        FROM users u
+       JOIN roles r ON r.id = u.role_id
        JOIN statuses_users su ON su.id = u.status_id
        WHERE u.email = $1`,
       [normalizedEmail],
@@ -174,6 +166,7 @@ router.post('/auth/login', async (req, res) => {
       name: row.name,
       email: row.email,
       roleId: row.role_id,
+      roleName: row.role_name,
     },
   });
 });
@@ -198,7 +191,10 @@ router.get('/auth/me', async (req, res) => {
 
   try {
     const result = await pool.query(
-      'SELECT id, name, email, role_id FROM users WHERE id = $1',
+      `SELECT u.id, u.name, u.email, u.role_id, r.name AS role_name
+       FROM users u
+       JOIN roles r ON r.id = u.role_id
+       WHERE u.id = $1`,
       [userId],
     );
     const row = result.rows[0];
@@ -210,6 +206,7 @@ router.get('/auth/me', async (req, res) => {
       name: row.name,
       email: row.email,
       roleId: row.role_id,
+      roleName: row.role_name,
     });
   } catch (err) {
     console.error(err);

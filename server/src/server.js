@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import healthRouter from './routes/health.js';
 import authRouter from './routes/auth.js';
+import projectsRouter from './routes/projects.js';
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/api', healthRouter);
 app.use('/api', authRouter);
+app.use('/api', projectsRouter);
 app.use(express.static(clientDir));
 
 app.listen(PORT, () => {
