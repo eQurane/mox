@@ -9,13 +9,14 @@ alwaysApply: false
 ## 1. Architecture
 - **Type:** Monolith
 - **Overview:** A single Express.js application handling all backend responsibilities, including API routing, database interactions, and business logic.
-- **Structure:** Modular structure separating routes, controllers, and database configuration.
+- **Structure:** Modular structure separating routes, middleware, and database configuration.
 
 ## 2. Tech Stack
 - **Language:** JavaScript (Node.js, ES Modules)
 - **Framework:** Express.js
 - **Database:** PostgreSQL (via `pg` package)
-- **Passwords:** `bcryptjs` for registration hashes
+- **Passwords:** `bcryptjs` for registration and login verification
+- **Auth tokens:** `jsonwebtoken` (JWT in `Authorization: Bearer`); secret and TTL from env (see `jwtSecret.js`)
 - **Tools:** `dotenv` for environment variables, `cors` for Cross-Origin Resource Sharing, `nodemon` for development.
 
 ## 3. API Design
@@ -31,9 +32,11 @@ alwaysApply: false
 - **Initialization:** Managed via custom scripts (`db_init/init.js`).
 
 ## 5. Authentication & Authorization
-- **Implemented:** password hashing with `bcryptjs` on registration (`POST /api/auth/register`); roles loaded from DB (`GET /api/auth/register-options`). See `.cursor/rules/backend-api.mdc`.
-- **Not implemented yet:** JWT/sessions, `Authorization` header, protected routes.
-- **Dev note:** any `roleId` from `roles` is accepted on register; lock this down before production.
+- **Registration:** `bcryptjs` hashing (`POST /api/auth/register`); roles from DB (`GET /api/auth/register-options`). Details: `.cursor/rules/backend-api.mdc`.
+- **JWT:** Issued on successful login (`POST /api/auth/login`). Clients send `Authorization: Bearer <token>`. Stateless verification in middleware (`bearerToken`, `requireAuth`).
+- **Protected routes:** Example `GET /api/projects` uses `requireAuth`; payload attaches `req.userId` (and `req.roleId` when present in token).
+- **Current user:** `GET /api/auth/me` with Bearer token.
+- **Dev note:** Any `roleId` from `roles` is accepted on register; restrict to a whitelist before production.
 
 ## 6. Business Logic
 - **Responsibilities:** Data validation, CRUD operations, error handling, and formatting responses.
@@ -41,4 +44,4 @@ alwaysApply: false
 
 ## 7. Integrations
 - **External APIs:** add as needed; use `.env` for secrets.
-- **Environment:** database and server config via `.env` in `server/` (see `backend-api.mdc`).
+- **Environment:** `.env` in `server/` — DB, `PORT`, `REGISTER_USER_STATUS`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `NODE_ENV`. In production, `JWT_SECRET` is required or the process exits (`jwtSecret.js`). See `backend-api.mdc`.

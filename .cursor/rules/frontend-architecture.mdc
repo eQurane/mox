@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Frontend (документация клиента)
 
-Одностраничное приложение: HTML + CSS + **ванильный ES modules**, общение с бэкендом только через **REST**, префикс **`/api`**.
+Одностраничное приложение: HTML + CSS + **ванильный ES modules**, общение с бэкендом только через **REST**, префикс **`/api`**. Токен после логина хранится в **`sessionStorage`** и передаётся как **`Authorization: Bearer`** (не серверная «session cookie»).
 
 ## Точка входа и оболочка
 
@@ -18,35 +18,73 @@ alwaysApply: false
 |--------|----------------|
 | Механизм | Hash: `#/маршрут` |
 | Событие | `hashchange` + первый вызов при загрузке |
-| Нормализация | `location.hash` без ведущего `#/`; пустой hash → эквивалент `register` |
-| Дефолт | Если hash пуст или `#`, `history.replaceState` на `#/register` |
+| Нормализация | `location.hash` без ведущего `#/`; пустой hash → эквивалент **`login`** |
+| Дефолт | Если hash пуст, `history.replaceState` на **`#/login`** |
 | Корень DOM | `#app` (`getElementById('app')`) |
 | Неизвестный путь | Сообщение «Страница не найдена» с классами `.page`, `.message`, `.message_error` |
 
+### Защищённые маршруты
+
+Если пользователь не залогинен (`session.js`), при переходе на эти пути выполняется редирект на `#/login` и рендер логина:
+
+- `home`
+- `project/:id` (числовой `id`)
+- `projects/new`
+- `admin`
+
+### Гость vs авторизованный
+
+- **Без токена:** доступны `login`, `register`; при попытке зайти на защищённый маршрут — `#/login`.
+- **С токеном:** при открытии `#/login` — редирект на `#/home`.
+
+### Ограничения по ролям (снимок из `sessionStorage`)
+
+- **`#/admin`:** только `roleName === 'Админ'`; иначе редирект на `#/home`.
+- **`#/projects/new`:** только **Админ** и **Менеджер**; иначе редирект на `#/home`.
+
 Пример добавления страницы: ветка в том же `route()` после нормализации пути → вызов `render…Page(appRoot)` из `js/pages/…`.
+
+## Сессия в браузере (`js/auth/session.js`)
+
+- Хранилище: **`sessionStorage`** (данные вкладки; не путать с серверной сессией).
+- Ключи: **`mox_token`** (JWT), **`mox_user`** (JSON снимок пользователя для UI).
+- API: `getToken`, `setSession`, `clearSession`, `isLoggedIn`, `getUserSnapshot`.
 
 ## Структура `client/`
 
 ```
 client/
   index.html
-  styles/          # общие стили; без инлайнов в разметке/JS там, где это не нужно для вычисляемого layout
+  styles/          # общие стили; без инлайнов там, где достаточно класса
+  icons/           # SVG при необходимости
   js/
     app.js         # только bootstrap и роутер
-    pages/         # один файл — один экран, экспорт рендер-функции
-    api/           # обёртки fetch, общие хелперы ответов
+    auth/
+      session.js   # токен и снимок пользователя
+    pages/         # один файл — один экран
+      home.js
+      login.js
+      register.js
+      admin.js
+      projectNew.js
+      projectDetail.js
+    api/           # обёртки fetch
+      auth.js
+      projects.js
 ```
 
-Каталоги `js/components/` и `js/utils/` — по мере появления повторения; локальный хелпер `el()` внутри страницы допустим, как в регистрации.
+Каталоги `js/components/` и `js/utils/` — по мере появления повторения; локальный хелпер `el()` внутри страницы допустим.
 
 ## Слой API (`js/api/`)
 
-- Базовый URL: **`/api`** (константа вроде `apiBase`).
-- **`fetch`** + **`async/await`**; после ответа — **`response.ok`**; парсинг JSON в try/catch; при ошибке — **`throw new Error(...)`** с понятным **русским** текстом (из тела при наличии, иначе запасное сообщение).
+- Базовый URL: **`/api`** (константа `apiBase` в модулях).
+- **`auth.js`:** `fetchRegisterOptions`, `register`, `login`, `fetchMe` (для `fetchMe` — заголовок `Authorization: Bearer` через `getToken()`).
+- **`projects.js`:** `fetchProjects` с Bearer-токеном.
+- **`fetch`** + **`async/await`**; **`parseJsonSafe`**; при ошибке — **`throw new Error(...)`** с понятным **русским** текстом (из тела при наличии).
 
 ```javascript
 // ✅ паттерн
-const res = await fetch(`${apiBase}/…`);
+const res = await fetch(`${apiBase}/…`, { headers: { Authorization: `Bearer ${getToken()}` } });
 const data = await parseJsonSafe(res);
 if (!res.ok) throw new Error(data.error || '…');
 ```
@@ -55,7 +93,7 @@ if (!res.ok) throw new Error(data.error || '…');
 
 ## Страницы (`js/pages/`)
 
-- Экспорт: **`render…Page(container)`** (может быть `async`).
+- Экспорт: **`render…Page(container)`** (может быть `async`; детали страниц могут принимать доп. аргументы, например id проекта).
 - Контент: сборка через DOM API; сообщения статуса/ошибки — блоки с `.message`, модификаторы `.message_error` / `.message_ok`; где уместно — **`aria-live`**.
 
 ## Анти-паттерны

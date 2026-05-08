@@ -9,19 +9,29 @@ alwaysApply: true
 
 ## Серверная часть (`server/`)
 
-- `src/server.js` — Точка входа в серверное приложение (Express/Node.js).
-- `src/db.js` — Подключение и конфигурация базы данных.
-- `src/routes/` — Директория для маршрутов API (например, `health.js`).
-- `db_init/init.js` — Скрипт для инициализации базы данных.
-- `package.json` — Зависимости и скрипты серверной части.
+- `src/server.js` — точка входа (Express, статика `client/`, монтирование `/api`).
+- `src/db.js` — пул PostgreSQL (`pg`).
+- `src/jwtSecret.js` — секрет и срок жизни JWT (`JWT_SECRET`, `JWT_EXPIRES_IN`).
+- `src/middleware/auth.js` — `Bearer`-токен, `requireAuth`.
+- `src/routes/health.js` — health и проверка БД.
+- `src/routes/auth.js` — регистрация, логин, JWT, `/auth/me`.
+- `src/routes/projects.js` — список проектов (защищённый маршрут).
+- `db_init/init.js` — создание БД и схемы, seed справочников.
+- `package.json` — зависимости и скрипты серверной части.
 
 ## Клиентская часть (`client/`)
 
-- Директория предназначена для frontend-части приложения (UI, компоненты, стили).
+- `index.html` — оболочка SPA, `#app`, подключение `js/app.js`.
+- `styles/` — общие стили (например `main.css`).
+- `js/app.js` — bootstrap и hash-роутер.
+- `js/pages/` — экраны: `home`, `login`, `register`, `admin`, `projectNew`, `projectDetail` и др.
+- `js/api/` — обёртки `fetch` к `/api` (`auth.js`, `projects.js`).
+- `js/auth/session.js` — токен и снимок пользователя в `sessionStorage`.
+- `icons/` — SVG-иконки (при необходимости).
 
 ## Настройки Cursor (`.cursor/`)
 
-- `agents/` — Промпты для специализированных агентов (planner, frontender, backender).
-- `rules/` — Правила и контекст для AI (включая это правило и `backend-architecture.mdc`, `project-structure.mdc`).
+- `agents/` — промпты агентов: planner, frontender, backender, designer.
+- `rules/` — правила для AI: `project-structure.mdc`, `backend-architecture.mdc`, `backend-api.mdc`, `database-schema.mdc`, `frontend-architecture.mdc`.
 
 При добавлении новых файлов и модулей, пожалуйста, следуйте этой структуре и размещайте логику в соответствующих директориях.
