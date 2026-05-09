@@ -5,6 +5,7 @@ import { renderRegisterPage } from './pages/register.js';
 import { renderAdminPage } from './pages/admin.js';
 import { renderProjectNewPage } from './pages/projectNew.js';
 import { renderProjectDetailPage } from './pages/projectDetail.js';
+import { renderProjectFormStub } from './pages/projectFormStub.js';
 
 const appRoot = document.getElementById('app');
 
@@ -73,13 +74,32 @@ function route() {
     return;
   }
 
-  if (segs[0] === 'project' && segs[1]) {
+  if (segs[0] === 'project' && segs[1] && /^\d+$/.test(segs[1])) {
     const id = segs[1];
-    if (!/^\d+$/.test(id)) {
-      appRoot.innerHTML = '<main class="page"><p class="message message_error">Страница не найдена.</p></main>';
+
+    if (segs[2] === 'edit' && segs.length === 3) {
+      renderProjectFormStub(appRoot, { projectId: id, variant: 'edit' });
       return;
     }
-    renderProjectDetailPage(appRoot, id);
+    if (segs[2] === 'tasks' && segs[3] === 'new' && segs.length === 4) {
+      renderProjectFormStub(appRoot, { projectId: id, variant: 'tasks-new' });
+      return;
+    }
+    if (segs[2] === 'collections' && segs[3] === 'new' && segs.length === 4) {
+      renderProjectFormStub(appRoot, { projectId: id, variant: 'collections-new' });
+      return;
+    }
+    if (segs[2] === 'media' && segs[3] === 'new' && segs.length === 4) {
+      renderProjectFormStub(appRoot, { projectId: id, variant: 'media-new' });
+      return;
+    }
+
+    if (segs.length === 2) {
+      renderProjectDetailPage(appRoot, id);
+      return;
+    }
+
+    appRoot.innerHTML = '<main class="page"><p class="message message_error">Страница не найдена.</p></main>';
     return;
   }
 

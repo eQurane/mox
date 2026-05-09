@@ -132,6 +132,151 @@ router.get('/projects', requireAuth, async (req, res) => {
   }
 });
 
+router.get('/projects/:id', requireAuth, async (req, res) => {
+  try {
+    const rawId = req.params.id;
+    const projectId = Number(rawId);
+    if (!Number.isInteger(projectId) || projectId < 1) {
+      return res.status(400).json({ error: 'Некорректный идентификатор проекта.' });
+    }
+
+    const roleName = await fetchRoleNameByUserId(pool, req.userId);
+    if (!roleName) {
+      return res.status(401).json({ error: 'Пользователь не найден.' });
+    }
+
+    const seeAll = ROLES_ALL_PROJECTS.has(roleName);
+
+    const projectSql = `
+      SELECT p.id,
+             p.name,
+             p.goal,
+             p.start_date,
+             p.end_date,
+             sp.name AS status_name,
+             (
+               SELECT m.path
+               FROM media m
+               JOIN collections c ON c.id = m.collection_id
+               JOIN tasks t ON t.id = c.task_id
+               WHERE t.project_id = p.id
+               ORDER BY m.upload_at DESC
+               LIMIT 1
+             ) AS cover_path
+      FROM projects p
+      JOIN statuses_projects sp ON sp.id = p.status_id
+      WHERE p.id = $1
+        AND (
+          $2 IS TRUE
+          OR EXISTS (
+            SELECT 1
+              FROM user_project up
+             WHERE up.project_id = p.id
+               AND up.user_id = $3
+               AND up.excluded_at IS NULL
+          )
+        )
+    `;
+
+    const projectResult = await pool.query(projectSql, [projectId, seeAll, req.userId]);
+    const prow = projectResult.rows[0];
+    if (!prow) {
+      return res.status(404).json({ error: 'Проект не найден.' });
+    }
+
+    const project = {
+      id: prow.id,
+      name: prow.name,
+      goal: prow.goal,
+      startDate: prow.start_date,
+      endDate: prow.end_date,
+      statusName: prow.status_name,
+      coverPath: prow.cover_path,
+    };
+
+    const tasksResult = await pool.query(
+      `SELECT t.id,
+              t.name,
+              t.description,
+              t.deadline,
+              r.name AS role_name,
+              st.name AS status_name
+         FROM tasks t
+         JOIN roles r ON r.id = t.role_id
+         JOIN statuses_tasks st ON st.id = t.status_id
+        WHERE t.project_id = $1
+        ORDER BY t.id ASC`,
+      [projectId],
+    );
+
+    const tasks = tasksResult.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      deadline: row.deadline,
+      roleName: row.role_name,
+      statusName: row.status_name,
+    }));
+
+    const collectionsResult = await pool.query(
+      `SELECT c.id,
+              c.task_id,
+              c.name,
+              c.description,
+              c.created_at,
+              c.last_edited_at
+         FROM collections c
+         JOIN tasks t ON t.id = c.task_id
+        WHERE t.project_id = $1
+        ORDER BY c.id ASC`,
+      [projectId],
+    );
+
+    const collections = collectionsResult.rows.map((row) => ({
+      id: row.id,
+      taskId: row.task_id,
+      name: row.name,
+      description: row.description ?? '',
+      createdAt: row.created_at,
+      lastEditedAt: row.last_edited_at,
+    }));
+
+    const mediaResult = await pool.query(
+      `SELECT m.id,
+              m.collection_id,
+              m.path,
+              m.name,
+              m.format,
+              m.description,
+              m.upload_at,
+              sm.name AS status_name
+         FROM media m
+         JOIN statuses_media sm ON sm.id = m.status_id
+         JOIN collections c ON c.id = m.collection_id
+         JOIN tasks t ON t.id = c.task_id
+        WHERE t.project_id = $1
+        ORDER BY m.upload_at DESC`,
+      [projectId],
+    );
+
+    const media = mediaResult.rows.map((row) => ({
+      id: row.id,
+      collectionId: row.collection_id,
+      path: row.path,
+      name: row.name,
+      format: row.format,
+      description: row.description ?? '',
+      uploadAt: row.upload_at,
+      statusName: row.status_name,
+    }));
+
+    res.json({ project, tasks, collections, media });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Не удалось загрузить проект.' });
+  }
+});
+
 router.post('/projects', requireAuth, async (req, res) => {
   let client;
   try {

@@ -25,6 +25,22 @@ export async function fetchProjects() {
   return data;
 }
 
+export async function fetchProjectById(id) {
+  const token = getToken();
+  if (!token) {
+    throw new Error('Сессия отсутствует.');
+  }
+  const encoded = encodeURIComponent(String(id));
+  const res = await fetch(`${apiBase}/projects/${encoded}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await parseJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(data.error || 'Не удалось загрузить проект.');
+  }
+  return data;
+}
+
 export async function fetchProjectCreateOptions() {
   const token = getToken();
   if (!token) {

@@ -745,3 +745,230 @@ a.button {
   background: #f1f5f9;
   color: #64748b;
 }
+
+/* Страница проекта: обзор и карточные секции */
+
+.project-detail__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  max-width: 1120px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.project-detail__toolbar-start {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.project-detail__page-title {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+  font-weight: 650;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-detail__loading {
+  margin: 0;
+  color: var(--muted);
+}
+
+.project-detail__error {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 8px 0 0;
+}
+
+.project-detail__back-link {
+  margin-top: 12px;
+}
+
+.project-detail__hero {
+  display: grid;
+  gap: 20px;
+  align-items: stretch;
+  max-width: 1120px;
+  margin: 0 auto 28px;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 24px rgba(26, 41, 66, 0.06);
+  overflow: hidden;
+  border-left-width: 4px;
+  border-left-style: solid;
+}
+
+.project-detail__hero--status-planned {
+  border-left-color: #64748b;
+}
+
+.project-detail__hero--status-active {
+  border-left-color: #059669;
+}
+
+.project-detail__hero--status-hold {
+  border-left-color: #d97706;
+}
+
+.project-detail__hero--status-done {
+  border-left-color: #6366f1;
+}
+
+.project-detail__hero--status-unknown {
+  border-left-color: #94a3b8;
+}
+
+@media (min-width: 720px) {
+  .project-detail__hero {
+    grid-template-columns: minmax(200px, 340px) 1fr;
+  }
+}
+
+.project-detail__hero-media {
+  min-height: 0;
+}
+
+.project-detail__hero .project-detail__hero-media {
+  border-radius: 0;
+}
+
+.project-detail__summary {
+  padding: 20px 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: center;
+}
+
+.project-detail__goal {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.project-detail__dates {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.project-detail__badge-row {
+  padding-top: 4px;
+}
+
+.project-detail__sections {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.project-detail__section {
+  min-width: 0;
+}
+
+.project-detail__section-title {
+  margin: 0 0 14px;
+  font-size: 1.125rem;
+  font-weight: 650;
+}
+
+.project-detail__section-heading {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+
+.project-detail__section-heading:hover {
+  color: var(--accent);
+  border-bottom-color: rgba(37, 99, 235, 0.4);
+}
+
+.project-detail__section-heading:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.projects-grid--detail {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.projects-grid--detail .project-card {
+  max-width: none;
+  width: 100%;
+}
+
+.project-card--static {
+  cursor: default;
+  text-decoration: none;
+}
+
+.project-card--static:hover {
+  transform: none;
+  box-shadow: 0 6px 24px rgba(26, 41, 66, 0.06);
+}
+
+.project-detail__media-card .project-card__img {
+  object-fit: contain;
+  background: #f1f5f9;
+}
+
+.media-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 650;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.media-badge--active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.media-badge--removed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.media-badge--archived {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* Заглушки форм проекта (projectFormStub.js) */
+
+.project-stub-card {
+  text-align: center;
+}
+
+.project-stub-card .register-card__header {
+  text-align: left;
+}
+
+.project-stub-card__figure {
+  display: flex;
+  justify-content: center;
+  margin: 8px 0 12px;
+}
+
+.project-stub-card__not-found-icon {
+  display: block;
+  opacity: 0.85;
+}
+
+.project-stub-card__lead {
+  margin-bottom: 20px;
+}

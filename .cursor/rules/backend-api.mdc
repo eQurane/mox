@@ -32,6 +32,7 @@ POST /api/auth/register              → 201 | 400 | 409 | 500
 POST /api/auth/login                 → 200 | 400 | 401 | 403 | 500
 GET  /api/auth/me                    → 200 | 401 | 500  (Bearer)
 GET  /api/projects                   → 200 | 401 | 500  (Bearer)
+GET  /api/projects/:id               → 200 | 400 | 401 | 404 | 500  (Bearer)
 GET  /api/projects/create-options     → 200 | 401 | 403 | 500  (Bearer)
 POST /api/projects                   → 201 | 400 | 401 | 403 | 500  (Bearer)
 ```
@@ -85,6 +86,23 @@ POST /api/projects                   → 201 | 400 | 401 | 403 | 500  (Bearer)
 **Видимость:** роли **Админ** и **Менеджер** — все проекты; остальные — только проекты, где пользователь есть в `user_project` и `excluded_at IS NULL`.
 
 **Ошибки:** `401`, `500`.
+
+### GET `/api/projects/:id`
+
+**Заголовок:** `Authorization: Bearer <token>`.
+
+**Параметр пути:** `id` — целое число ≥ 1; иначе **`400`**.
+
+**Видимость:** та же, что у **`GET /api/projects`**: **Админ** и **Менеджер** — любой существующий проект; иначе — только при активном членстве в **`user_project`** (`excluded_at IS NULL`). Если проект не найден или доступ запрещён — единый ответ **`404`** с сообщением «Проект не найден.».
+
+**200:** объект с полями:
+
+- **`project`:** `{ id, name, goal, startDate, endDate, statusName, coverPath }` — `coverPath` как в списке проектов (последнее медиа по цепочке задача → коллекция → медиа по `upload_at` DESC), либо `null`.
+- **`tasks`:** массив `{ id, name, description, deadline, roleName, statusName }` — `deadline` в JSON как отдаёт PostgreSQL/драйвер.
+- **`collections`:** массив `{ id, taskId, name, description, createdAt, lastEditedAt }`.
+- **`media`:** массив `{ id, collectionId, path, name, format, description, uploadAt, statusName }`.
+
+**Ошибки:** `400` — неверный `id`; `401`; `404`; `500`.
 
 ### POST `/api/projects`
 

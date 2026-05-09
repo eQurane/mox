@@ -41,6 +41,7 @@ alwaysApply: false
 
 - **`#/admin`:** только `roleName === 'Админ'`; иначе редирект на `#/home`.
 - **`#/projects/new`:** только **Админ** и **Менеджер**; иначе редирект на `#/home`. Экран **`projectNew.js`:** перед формой вызывается **`fetchProjectCreateOptions`** (`statuses` + `assignableUsers` по правилам роли); ширина блока через **`project-new-page`**; шапка с «назад» (`client/icons/back-24.svg`). Поля: название, цель; **статус** (`select`); даты (**`min`/`max`**); блок **«Участники»** — чекбоксы по списку сервера, подсказка по ролям (админ может назначить ещё менеджеров), текст про автоматическое включение **создателя** в `user_project`; **`createProject`** передаёт `statusId`, `participantIds`; при успехе — **`#/project/:id`**. Ошибки — **`.field--error`** (`main.css`).
+- **`#/project/:id`:** экран **`projectDetail.js`:** **`fetchProjectById(id)`** → **`GET /api/projects/:id`**; шапка с «назад», заголовок проекта, кнопка **редактирования** (ведёт на заглушку `#/project/:id/edit`); блок сведений о проекте (цель, даты, статус, опционально обложка); три секции: заголовки **Технические задания** / **Коллекции** / **Мультимедиа** — ссылки на будущие формы (`…/tasks/new`, `…/collections/new`, `…/media/new`); сетки карточек в стиле дашборда; при пустой сетке — карточка **с плюсом** (как «Новый проект» на главной), ведущая на тот же stub-маршрут. Заглушки форм: **`projectFormStub.js`** (иконка `not-found-24.svg`, кнопка «К проекту»). Ошибка загрузки — сообщение и ссылка «К проектам».
 
 Пример добавления страницы: ветка в том же `route()` после нормализации пути → вызов `render…Page(appRoot)` из `js/pages/…`.
 
@@ -68,6 +69,7 @@ client/
       admin.js
       projectNew.js
       projectDetail.js
+      projectFormStub.js
     api/           # обёртки fetch
       auth.js
       projects.js
@@ -79,7 +81,7 @@ client/
 
 - Базовый URL: **`/api`** (константа `apiBase` в модулях).
 - **`auth.js`:** `fetchRegisterOptions`, `register`, `login`, `fetchMe` (для `fetchMe` — заголовок `Authorization: Bearer` через `getToken()`).
-- **`projects.js`:** `fetchProjects`, **`fetchProjectCreateOptions`**, **`createProject`** (Bearer; `create-options` и `POST` — для ролей создания проекта на сервере).
+- **`projects.js`:** `fetchProjects`, **`fetchProjectById`**, **`fetchProjectCreateOptions`**, **`createProject`** (Bearer; детали и создание — по правилам сервера).
 - **`fetch`** + **`async/await`**; **`parseJsonSafe`**; при ошибке — **`throw new Error(...)`** с понятным **русским** текстом (из тела при наличии).
 
 ```javascript
