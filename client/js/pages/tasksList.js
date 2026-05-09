@@ -118,6 +118,12 @@ function buildTaskListCard(task) {
           className: 'project-card__muted',
           textContent: `Проект: ${task.projectName ?? '—'}`,
         });
+  const collectionsHref =
+    task.projectId != null && task.id != null
+      ? `#/collections?projectId=${encodeURIComponent(String(task.projectId))}&taskId=${encodeURIComponent(String(task.id))}`
+      : task.id != null
+        ? `#/collections?taskId=${encodeURIComponent(String(task.id))}`
+        : '#/collections';
   const body = el(
     'div',
     { className: 'project-card__body' },
@@ -132,6 +138,11 @@ function buildTaskListCard(task) {
       textContent: `Роль: ${task.roleName ?? '—'}`,
     }),
     projectLink,
+    el('a', {
+      className: 'project-card__muted project-card__project-link',
+      href: collectionsHref,
+      textContent: 'Коллекции',
+    }),
     el(
       'div',
       { className: 'project-card__footer' },

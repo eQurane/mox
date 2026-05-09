@@ -34,6 +34,7 @@ GET  /api/auth/me                    → 200 | 401 | 500  (Bearer)
 GET  /api/projects                   → 200 | 401 | 500  (Bearer)
 GET  /api/projects/:id               → 200 | 400 | 401 | 404 | 500  (Bearer)
 GET  /api/tasks                     → 200 | 400 | 401 | 500  (Bearer)
+GET  /api/collections               → 200 | 400 | 401 | 500  (Bearer)
 GET  /api/projects/create-options     → 200 | 401 | 403 | 500  (Bearer)
 POST /api/projects                   → 201 | 400 | 401 | 403 | 500  (Bearer)
 ```
@@ -119,6 +120,28 @@ POST /api/projects                   → 201 | 400 | 401 | 403 | 500  (Bearer)
 - **`deadlineFrom`**, **`deadlineTo`** — даты **`YYYY-MM-DD`** inclusive по дате дедлайна (`deadline::date`). Обе необязательны; если указаны обе и `deadlineFrom` > `deadlineTo` — **`400`**.
 
 **200:** `{ tasks: [{ id, projectId, projectName, name, description, deadline, roleName, statusId, statusName }], statuses: [{ id, name }] }` — `statuses` — полный справочник статусов задач для фильтров (порядок по `id`).
+
+**Ошибки:** `400` — валидация query; `401`; `500`.
+
+### GET `/api/collections`
+
+**Заголовок:** `Authorization: Bearer <token>`.
+
+**Видимость:** та же логика, что у **`GET /api/tasks`**: коллекции только по задачам из проектов в зоне видимости (**Админ** и **Менеджер** — все; иначе — только при активном членстве в **`user_project`**, `excluded_at IS NULL`).
+
+**Query (все необязательные):**
+
+- **`q`** — подстрока по имени коллекции (`collections.name`, без учёта регистра).
+- **`projectId`** — целое число ≥ 1; фильтр по проекту задачи (`tasks.project_id`). Неверный тип — **`400`**. Если проект вне зоны видимости — пустой список (**`200`**).
+- **`taskId`** — целое ≥ 1; фильтр по задаче (`collections.task_id`). Неверный тип — **`400`**. Если задача вне зоны видимости — пустой список (**`200`**).
+- **`taskStatusId`** — целое ≥ 1; должен существовать в **`statuses_tasks`**; фильтр по статусу связанной задачи (`tasks.status_id`); иначе **`400`**.
+- **`projectStatusId`** — целое ≥ 1; должен существовать в **`statuses_projects`**; фильтр по статусу проекта (`projects.status_id`); иначе **`400`**.
+- **`createdFrom`**, **`createdTo`** — даты **`YYYY-MM-DD`** inclusive по дате создания коллекции (`collections.created_at::date`). Неверный формат — **`400`**. Если указаны обе и `createdFrom` > `createdTo` — **`400`**.
+- **`lastEditedFrom`**, **`lastEditedTo`** — даты **`YYYY-MM-DD`** inclusive по дате последнего изменения (`collections.last_edited_at::date`). Неверный формат — **`400`**. Если указаны обе и `lastEditedFrom` > `lastEditedTo` — **`400`**.
+
+Если указаны **оба** `projectId` и `taskId`, применяются оба условия (несогласованная пара даёт пустой список).
+
+**200:** `{ collections: [{ id, taskId, name, description, createdAt, lastEditedAt, projectId, projectName, taskName }], taskStatuses: [{ id, name }], projectStatuses: [{ id, name }] }` — справочники статусов для фильтров на клиенте (порядок по `id`).
 
 **Ошибки:** `400` — валидация query; `401`; `500`.
 

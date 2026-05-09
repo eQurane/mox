@@ -259,6 +259,7 @@ export async function renderProjectDetailPage(container, projectId) {
     const card = el('article', {
       className: `project-card project-card--static project-card--status-${tslug}`,
     });
+    const collectionsHref = `#/collections?projectId=${encodeURIComponent(String(projectId))}&taskId=${encodeURIComponent(String(task.id))}`;
     const body = el(
       'div',
       { className: 'project-card__body' },
@@ -271,6 +272,11 @@ export async function renderProjectDetailPage(container, projectId) {
       el('p', {
         className: 'project-card__muted',
         textContent: `Роль: ${task.roleName ?? '—'}`,
+      }),
+      el('a', {
+        className: 'project-card__muted project-card__project-link',
+        href: collectionsHref,
+        textContent: 'Коллекции',
       }),
       el(
         'div',
@@ -361,7 +367,8 @@ export async function renderProjectDetailPage(container, projectId) {
 
   const hrefTasksNew = `#/project/${projectId}/tasks/new`;
   const hrefTasksList = `#/tasks?projectId=${encodeURIComponent(String(projectId))}`;
-  const hrefCollections = `#/project/${projectId}/collections/new`;
+  const hrefCollectionsNew = `#/project/${projectId}/collections/new`;
+  const hrefCollectionsList = `#/collections?projectId=${encodeURIComponent(String(projectId))}`;
   const hrefMedia = `#/project/${projectId}/media/new`;
 
   const tasksSectionHead = el(
@@ -405,10 +412,42 @@ export async function renderProjectDetailPage(container, projectId) {
 
   const colGrid = el('div', { className: 'projects-grid projects-grid--detail' });
   if (collections.length === 0) {
-    colGrid.append(buildSectionCreateCard(hrefCollections, 'Новая коллекция'));
+    colGrid.append(buildSectionCreateCard(hrefCollectionsNew, 'Новая коллекция'));
   } else {
     collections.forEach((c) => colGrid.append(buildCollectionCard(c)));
   }
+
+  const collectionsSectionHead = el(
+    'div',
+    { className: 'project-detail__section-head' },
+    el(
+      'h2',
+      { className: 'project-detail__section-title project-detail__section-title--tasks' },
+      el('a', {
+        className: 'project-detail__section-heading',
+        href: hrefCollectionsList,
+        textContent: 'Коллекции',
+      }),
+      el(
+        'a',
+        {
+          className: 'button button-ghost button-icon project-detail__section-list-btn',
+          href: hrefCollectionsList,
+          'aria-label': 'Список всех коллекций проекта',
+          title: 'Список коллекций',
+        },
+        el('img', {
+          className: 'header-toolbar__icon',
+          src: ICON_LIST,
+          alt: '',
+          width: 24,
+          height: 24,
+          decoding: 'async',
+        }),
+      ),
+    ),
+    el('a', { className: 'project-detail__section-add', href: hrefCollectionsNew, textContent: 'Новая коллекция' }),
+  );
 
   const mediaGrid = el('div', { className: 'projects-grid projects-grid--detail' });
   if (media.length === 0) {
@@ -429,7 +468,7 @@ export async function renderProjectDetailPage(container, projectId) {
     el(
       'section',
       { className: 'project-detail__section' },
-      el('h2', { className: 'project-detail__section-title' }, sectionHeading(hrefCollections, 'Коллекции')),
+      collectionsSectionHead,
       colGrid,
     ),
     el(

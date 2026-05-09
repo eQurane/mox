@@ -7,6 +7,7 @@ import healthRouter from './routes/health.js';
 import authRouter from './routes/auth.js';
 import projectsRouter from './routes/projects.js';
 import tasksRouter from './routes/tasks.js';
+import collectionsRouter from './routes/collections.js';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use('/api', healthRouter);
 app.use('/api', authRouter);
 app.use('/api', projectsRouter);
 app.use('/api', tasksRouter);
+app.use('/api', collectionsRouter);
 app.use(express.static(clientDir));
 
 app.listen(PORT, () => {

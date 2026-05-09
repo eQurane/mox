@@ -17,6 +17,7 @@ alwaysApply: true
 - `src/routes/auth.js` — регистрация, логин, JWT, `/auth/me`.
 - `src/routes/projects.js` — список проектов, опции формы создания (`GET …/create-options`), создание (`POST`, в т.ч. `user_project`).
 - `src/routes/tasks.js` — список задач (ТЗ) с фильтрами (`GET /tasks`).
+- `src/routes/collections.js` — список коллекций с фильтрами (`GET /collections`).
 - `db_init/init.js` — создание БД и схемы, seed справочников.
 - `package.json` — зависимости и скрипты серверной части.
 
@@ -26,8 +27,8 @@ alwaysApply: true
 - `styles/` — общие стили (например `main.css`).
 - `js/app.js` — bootstrap и hash-роутер.
 - `js/nav/` — при необходимости общая навигация (например `dashboardTabs.js` для вкладок разделов).
-- `js/pages/` — экраны: `home`, `tasksList`, `login`, `register`, `admin`, `projectNew`, `projectDetail` и др.
-- `js/api/` — обёртки `fetch` к `/api` (`auth.js`, `projects.js`, `tasks.js` — `fetchTasks`).
+- `js/pages/` — экраны: `home`, `tasksList`, `collectionsList`, `login`, `register`, `admin`, `projectNew`, `projectDetail` и др.
+- `js/api/` — обёртки `fetch` к `/api` (`auth.js`, `projects.js`, `tasks.js` — `fetchTasks`, `collections.js` — `fetchCollections`).
 - `js/auth/session.js` — токен и снимок пользователя в `sessionStorage`.
 - `icons/` — SVG-иконки (при необходимости).
 

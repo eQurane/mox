@@ -1,4 +1,4 @@
-/** @param {'home' | 'tasks'} active */
+/** @param {'home' | 'tasks' | 'collections' | 'media' | 'admin'} active */
 export function appendDashboardSectionTabs(nav, { active, isAdmin }) {
   nav.append(
     elTab('Проекты', '#/home', active === 'home'),
