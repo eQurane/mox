@@ -108,17 +108,6 @@ function buildSectionCreateCard(href, label) {
   return card;
 }
 
-function sectionHeading(href, text) {
-  return el(
-    'a',
-    {
-      className: 'project-detail__section-heading',
-      href,
-      textContent: text,
-    },
-  );
-}
-
 export async function renderProjectDetailPage(container, projectId) {
   container.innerHTML = '';
   const main = el('main', { className: 'dashboard project-detail' });
@@ -260,6 +249,7 @@ export async function renderProjectDetailPage(container, projectId) {
       className: `project-card project-card--static project-card--status-${tslug}`,
     });
     const collectionsHref = `#/collections?projectId=${encodeURIComponent(String(projectId))}&taskId=${encodeURIComponent(String(task.id))}`;
+    const mediaHref = `#/media?projectId=${encodeURIComponent(String(projectId))}&taskId=${encodeURIComponent(String(task.id))}`;
     const body = el(
       'div',
       { className: 'project-card__body' },
@@ -277,6 +267,11 @@ export async function renderProjectDetailPage(container, projectId) {
         className: 'project-card__muted project-card__project-link',
         href: collectionsHref,
         textContent: 'Коллекции',
+      }),
+      el('a', {
+        className: 'project-card__muted project-card__project-link',
+        href: mediaHref,
+        textContent: 'Медиа',
       }),
       el(
         'div',
@@ -369,6 +364,7 @@ export async function renderProjectDetailPage(container, projectId) {
   const hrefTasksList = `#/tasks?projectId=${encodeURIComponent(String(projectId))}`;
   const hrefCollectionsNew = `#/project/${projectId}/collections/new`;
   const hrefCollectionsList = `#/collections?projectId=${encodeURIComponent(String(projectId))}`;
+  const hrefMediaList = `#/media?projectId=${encodeURIComponent(String(projectId))}`;
   const hrefMedia = `#/project/${projectId}/media/new`;
 
   const tasksSectionHead = el(
@@ -456,6 +452,38 @@ export async function renderProjectDetailPage(container, projectId) {
     media.forEach((m) => mediaGrid.append(buildMediaCard(m)));
   }
 
+  const mediaSectionHead = el(
+    'div',
+    { className: 'project-detail__section-head' },
+    el(
+      'h2',
+      { className: 'project-detail__section-title project-detail__section-title--tasks' },
+      el('a', {
+        className: 'project-detail__section-heading',
+        href: hrefMediaList,
+        textContent: 'Мультимедиа',
+      }),
+      el(
+        'a',
+        {
+          className: 'button button-ghost button-icon project-detail__section-list-btn',
+          href: hrefMediaList,
+          'aria-label': 'Список всех медиа проекта',
+          title: 'Список медиа',
+        },
+        el('img', {
+          className: 'header-toolbar__icon',
+          src: ICON_LIST,
+          alt: '',
+          width: 24,
+          height: 24,
+          decoding: 'async',
+        }),
+      ),
+    ),
+    el('a', { className: 'project-detail__section-add', href: hrefMedia, textContent: 'Добавить медиа' }),
+  );
+
   const sections = el(
     'div',
     { className: 'project-detail__sections' },
@@ -474,7 +502,7 @@ export async function renderProjectDetailPage(container, projectId) {
     el(
       'section',
       { className: 'project-detail__section' },
-      el('h2', { className: 'project-detail__section-title' }, sectionHeading(hrefMedia, 'Мультимедиа')),
+      mediaSectionHead,
       mediaGrid,
     ),
   );

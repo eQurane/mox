@@ -18,6 +18,7 @@ alwaysApply: true
 - `src/routes/projects.js` — список проектов, опции формы создания (`GET …/create-options`), создание (`POST`, в т.ч. `user_project`).
 - `src/routes/tasks.js` — список задач (ТЗ) с фильтрами (`GET /tasks`).
 - `src/routes/collections.js` — список коллекций с фильтрами (`GET /collections`).
+- `src/routes/media.js` — список медиа с фильтрами (`GET /media`).
 - `db_init/init.js` — создание БД и схемы, seed справочников.
 - `package.json` — зависимости и скрипты серверной части.
 
@@ -27,8 +28,8 @@ alwaysApply: true
 - `styles/` — общие стили (например `main.css`).
 - `js/app.js` — bootstrap и hash-роутер.
 - `js/nav/` — при необходимости общая навигация (например `dashboardTabs.js` для вкладок разделов).
-- `js/pages/` — экраны: `home`, `tasksList`, `collectionsList`, `login`, `register`, `admin`, `projectNew`, `projectDetail` и др.
-- `js/api/` — обёртки `fetch` к `/api` (`auth.js`, `projects.js`, `tasks.js` — `fetchTasks`, `collections.js` — `fetchCollections`).
+- `js/pages/` — экраны: `home`, `tasksList`, `collectionsList`, `mediaList`, `login`, `register`, `admin`, `projectNew`, `projectDetail` и др.
+- `js/api/` — обёртки `fetch` к `/api` (`auth.js`, `projects.js`, `tasks.js` — `fetchTasks`, `collections.js` — `fetchCollections`, `media.js` — `fetchMedia`).
 - `js/auth/session.js` — токен и снимок пользователя в `sessionStorage`.
 - `icons/` — SVG-иконки (при необходимости).
 

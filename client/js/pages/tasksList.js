@@ -124,6 +124,12 @@ function buildTaskListCard(task) {
       : task.id != null
         ? `#/collections?taskId=${encodeURIComponent(String(task.id))}`
         : '#/collections';
+  const mediaHref =
+    task.projectId != null && task.id != null
+      ? `#/media?projectId=${encodeURIComponent(String(task.projectId))}&taskId=${encodeURIComponent(String(task.id))}`
+      : task.id != null
+        ? `#/media?taskId=${encodeURIComponent(String(task.id))}`
+        : '#/media';
   const body = el(
     'div',
     { className: 'project-card__body' },
@@ -142,6 +148,11 @@ function buildTaskListCard(task) {
       className: 'project-card__muted project-card__project-link',
       href: collectionsHref,
       textContent: 'Коллекции',
+    }),
+    el('a', {
+      className: 'project-card__muted project-card__project-link',
+      href: mediaHref,
+      textContent: 'Медиа',
     }),
     el(
       'div',

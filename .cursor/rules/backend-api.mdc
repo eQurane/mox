@@ -35,6 +35,7 @@ GET  /api/projects                   → 200 | 401 | 500  (Bearer)
 GET  /api/projects/:id               → 200 | 400 | 401 | 404 | 500  (Bearer)
 GET  /api/tasks                     → 200 | 400 | 401 | 500  (Bearer)
 GET  /api/collections               → 200 | 400 | 401 | 500  (Bearer)
+GET  /api/media                     → 200 | 400 | 401 | 500  (Bearer)
 GET  /api/projects/create-options     → 200 | 401 | 403 | 500  (Bearer)
 POST /api/projects                   → 201 | 400 | 401 | 403 | 500  (Bearer)
 ```
@@ -142,6 +143,27 @@ POST /api/projects                   → 201 | 400 | 401 | 403 | 500  (Bearer)
 Если указаны **оба** `projectId` и `taskId`, применяются оба условия (несогласованная пара даёт пустой список).
 
 **200:** `{ collections: [{ id, taskId, name, description, createdAt, lastEditedAt, projectId, projectName, taskName }], taskStatuses: [{ id, name }], projectStatuses: [{ id, name }] }` — справочники статусов для фильтров на клиенте (порядок по `id`).
+
+**Ошибки:** `400` — валидация query; `401`; `500`.
+
+### GET `/api/media`
+
+**Заголовок:** `Authorization: Bearer <token>`.
+
+**Видимость:** та же логика, что у **`GET /api/collections`**: медиа только по цепочке коллекция → задача → проект в зоне видимости (**Админ** и **Менеджер** — все; иначе — только при активном членстве в **`user_project`**, `excluded_at IS NULL`).
+
+**Query (все необязательные):**
+
+- **`q`** — подстрока по имени файла (`media.name`, без учёта регистра).
+- **`projectId`** — целое число ≥ 1; фильтр по проекту задачи (`tasks.project_id`). Неверный тип — **`400`**. Если проект вне зоны видимости — пустой список (**`200`**).
+- **`taskId`** — целое ≥ 1; фильтр по задаче (`collections.task_id`). Неверный тип — **`400`**. Если задача вне зоны видимости — пустой список (**`200`**).
+- **`collectionId`** — целое ≥ 1; фильтр по коллекции (`media.collection_id`). Неверный тип — **`400`**.
+- **`statusId`** — целое ≥ 1; должен существовать в **`statuses_media`**; иначе **`400`**.
+- **`uploadFrom`**, **`uploadTo`** — даты **`YYYY-MM-DD`** inclusive по дате загрузки (`media.upload_at::date`). Неверный формат — **`400`**. Если указаны обе и `uploadFrom` > `uploadTo` — **`400`**.
+
+Если указаны **оба** `projectId` и `taskId`, применяются оба условия (несогласованная пара даёт пустой список).
+
+**200:** `{ media: [{ id, collectionId, path, name, format, description, uploadAt, statusId, statusName, collectionName, taskId, taskName, projectId, projectName }], statuses: [{ id, name }] }` — `statuses` — полный справочник **`statuses_media`** для фильтров (порядок по `id`).
 
 **Ошибки:** `400` — валидация query; `401`; `500`.
 

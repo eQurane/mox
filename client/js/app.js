@@ -8,6 +8,7 @@ import { renderProjectDetailPage } from './pages/projectDetail.js';
 import { renderProjectFormStub } from './pages/projectFormStub.js';
 import { renderTasksListPage } from './pages/tasksList.js';
 import { renderCollectionsListPage } from './pages/collectionsList.js';
+import { renderMediaListPage } from './pages/mediaList.js';
 
 const appRoot = document.getElementById('app');
 
@@ -31,6 +32,7 @@ function isProtectedRoute(normalized) {
   if (segs[0] === 'admin' && segs.length === 1) return true;
   if (segs[0] === 'tasks' && segs.length === 1) return true;
   if (segs[0] === 'collections' && segs.length === 1) return true;
+  if (segs[0] === 'media' && segs.length === 1) return true;
   return false;
 }
 
@@ -126,6 +128,11 @@ function route() {
 
   if (segs[0] === 'collections' && segs.length === 1) {
     renderCollectionsListPage(appRoot, searchParams);
+    return;
+  }
+
+  if (segs[0] === 'media' && segs.length === 1) {
+    renderMediaListPage(appRoot, searchParams);
     return;
   }
 

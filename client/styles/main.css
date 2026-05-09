@@ -954,6 +954,12 @@ a.button {
   flex: 1 1 240px;
 }
 
+/* Вторая строка панели фильтров (напр. даты загрузки на странице медиа) */
+.tasks-filters__field--row2 {
+  flex: 0 0 100%;
+  width: 100%;
+}
+
 .tasks-filters__label {
   font-size: 0.8125rem;
   font-weight: 600;
