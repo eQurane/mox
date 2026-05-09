@@ -1,7 +1,7 @@
 import { fetchProjects } from '../api/projects.js';
 import { fetchMe } from '../api/auth.js';
 import { clearSession, getToken, setSession } from '../auth/session.js';
-
+import { appendDashboardSectionTabs } from '../nav/dashboardTabs.js';
 const ICON_ACCOUNT = '/icons/account-24.svg';
 const ICON_SEARCH = '/icons/search-24.svg';
 const ICON_UPDATE = '/icons/update-24.svg';
@@ -152,13 +152,12 @@ export async function renderHomePage(container) {
   const header = el('header', { className: 'app-header' });
 
   const brand = el('div', { className: 'app-header__brand' });
-  brand.append(el('h1', { className: 'app-header__title', textContent: 'Проекты' }));
 
   const nav = el('nav', { className: 'app-header__nav', 'aria-label': 'Разделы' });
-  if (user.roleName === 'Админ') {
-    nav.append(el('a', { className: 'app-header__tab', href: '#/admin', textContent: 'Администрирование' }));
-  }
-  brand.append(nav);
+  appendDashboardSectionTabs(nav, {
+    active: 'home',
+    isAdmin: user.roleName === 'Админ',
+  });  brand.append(nav);
 
   const searchWrap = el('div', { className: 'app-header__search', role: 'search' });
   searchWrap.append(
@@ -215,8 +214,10 @@ export async function renderHomePage(container) {
   panel.addEventListener('click', (e) => e.stopPropagation());
 
   actions.append(refreshBtn, userWrap);
-  header.append(brand, searchWrap, actions);
+  header.append(brand, actions);
   main.append(header);
+
+  main.append(searchWrap);
 
   const statusRegion = el('div', { className: 'dashboard__status', role: 'status', 'aria-live': 'polite' });
   const grid = el('div', { className: 'projects-grid' });

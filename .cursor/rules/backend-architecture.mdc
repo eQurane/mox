@@ -34,7 +34,7 @@ alwaysApply: false
 ## 5. Authentication & Authorization
 - **Registration:** `bcryptjs` hashing (`POST /api/auth/register`); roles from DB (`GET /api/auth/register-options`). Details: `.cursor/rules/backend-api.mdc`.
 - **JWT:** Issued on successful login (`POST /api/auth/login`). Clients send `Authorization: Bearer <token>`. Stateless verification in middleware (`bearerToken`, `requireAuth`).
-- **Protected routes:** `GET /api/projects`, **`GET /api/projects/:id`**, **`GET /api/projects/create-options`** и `POST /api/projects` используют `requireAuth`; в payload запроса добавляются `req.userId` (и `req.roleId`, когда он есть в токене).
+- **Protected routes:** `GET /api/projects`, **`GET /api/projects/:id`**, **`GET /api/projects/create-options`**, **`GET /api/tasks`** и `POST /api/projects` используют `requireAuth`; в payload запроса добавляются `req.userId` (и `req.roleId`, когда он есть в токене).
 - **Current user:** `GET /api/auth/me` with Bearer token.
 - **Dev note:** Any `roleId` from `roles` is accepted on register; restrict to a whitelist before production.
 

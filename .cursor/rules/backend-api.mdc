@@ -33,6 +33,7 @@ POST /api/auth/login                 → 200 | 400 | 401 | 403 | 500
 GET  /api/auth/me                    → 200 | 401 | 500  (Bearer)
 GET  /api/projects                   → 200 | 401 | 500  (Bearer)
 GET  /api/projects/:id               → 200 | 400 | 401 | 404 | 500  (Bearer)
+GET  /api/tasks                     → 200 | 400 | 401 | 500  (Bearer)
 GET  /api/projects/create-options     → 200 | 401 | 403 | 500  (Bearer)
 POST /api/projects                   → 201 | 400 | 401 | 403 | 500  (Bearer)
 ```
@@ -103,6 +104,23 @@ POST /api/projects                   → 201 | 400 | 401 | 403 | 500  (Bearer)
 - **`media`:** массив `{ id, collectionId, path, name, format, description, uploadAt, statusName }`.
 
 **Ошибки:** `400` — неверный `id`; `401`; `404`; `500`.
+
+### GET `/api/tasks`
+
+**Заголовок:** `Authorization: Bearer <token>`.
+
+**Видимость:** та же логика, что у **`GET /api/projects`**: задачи только по проектам, которые пользователь имеет право видеть (**Админ** и **Менеджер** — все проекты; иначе — только при активном членстве в **`user_project`**, `excluded_at IS NULL`).
+
+**Query (все необязательные):**
+
+- **`q`** — подстрока по имени задачи (`tasks.name`, без учёта регистра).
+- **`projectId`** — целое число ≥ 1; фильтр по проекту. Неверный тип — **`400`**. Если проекта нет в зоне видимости — пустой список задач без ошибки (**`200`**).
+- **`statusId`** — целое ≥ 1, должен существовать в **`statuses_tasks`**; иначе **`400`**.
+- **`deadlineFrom`**, **`deadlineTo`** — даты **`YYYY-MM-DD`** inclusive по дате дедлайна (`deadline::date`). Обе необязательны; если указаны обе и `deadlineFrom` > `deadlineTo` — **`400`**.
+
+**200:** `{ tasks: [{ id, projectId, projectName, name, description, deadline, roleName, statusId, statusName }], statuses: [{ id, name }] }` — `statuses` — полный справочник статусов задач для фильтров (порядок по `id`).
+
+**Ошибки:** `400` — валидация query; `401`; `500`.
 
 ### POST `/api/projects`
 

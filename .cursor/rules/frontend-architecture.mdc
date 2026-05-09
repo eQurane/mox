@@ -18,7 +18,7 @@ alwaysApply: false
 |--------|----------------|
 | Механизм | Hash: `#/маршрут` |
 | Событие | `hashchange` + первый вызов при загрузке |
-| Нормализация | `location.hash` без ведущего `#/`; пустой hash → эквивалент **`login`** |
+| Нормализация | часть URL hash до символа **`?`** как путь (`tasks` для `#/tasks?projectId=5`); query — объект **`URLSearchParams`** после `?` |
 | Дефолт | Если hash пуст, `history.replaceState` на **`#/login`** |
 | Корень DOM | `#app` (`getElementById('app')`) |
 | Неизвестный путь | Сообщение «Страница не найдена» с классами `.page`, `.message`, `.message_error` |
@@ -28,6 +28,7 @@ alwaysApply: false
 Если пользователь не залогинен (`session.js`), при переходе на эти пути выполняется редирект на `#/login` и рендер логина:
 
 - `home`
+- `tasks`
 - `project/:id` (числовой `id`)
 - `projects/new`
 - `admin`
@@ -39,9 +40,11 @@ alwaysApply: false
 
 ### Ограничения по ролям (снимок из `sessionStorage`)
 
+- **`#/home` (`home.js`):** **`fetchProjects`**, вкладки навигации через **`nav/dashboardTabs.js`** — **Проекты** (активная; **`.app-header__tab--current`**), **ТЗ**, **Коллекции**, **Медиа**, затем **Администрирование** (у администратора). Шапка (flex): навигация и бренд слева, кнопки обновления и меню аккаунта справа. Поле поиска по названию проекта находится под шапкой и занимает полную ширину контейнера. Карточки проектов в сетке ниже поиска.
 - **`#/admin`:** только `roleName === 'Админ'`; иначе редирект на `#/home`.
 - **`#/projects/new`:** только **Админ** и **Менеджер**; иначе редирект на `#/home`. Экран **`projectNew.js`:** перед формой вызывается **`fetchProjectCreateOptions`** (`statuses` + `assignableUsers` по правилам роли); ширина блока через **`project-new-page`**; шапка с «назад» (`client/icons/back-24.svg`). Поля: название, цель; **статус** (`select`); даты (**`min`/`max`**); блок **«Участники»** — чекбоксы по списку сервера, подсказка по ролям (админ может назначить ещё менеджеров), текст про автоматическое включение **создателя** в `user_project`; **`createProject`** передаёт `statusId`, `participantIds`; при успехе — **`#/project/:id`**. Ошибки — **`.field--error`** (`main.css`).
-- **`#/project/:id`:** экран **`projectDetail.js`:** **`fetchProjectById(id)`** → **`GET /api/projects/:id`**; шапка с «назад», заголовок проекта, кнопка **редактирования** (ведёт на заглушку `#/project/:id/edit`); блок сведений о проекте (цель, даты, статус, опционально обложка); три секции: заголовки **Технические задания** / **Коллекции** / **Мультимедиа** — ссылки на будущие формы (`…/tasks/new`, `…/collections/new`, `…/media/new`); сетки карточек в стиле дашборда; при пустой сетке — карточка **с плюсом** (как «Новый проект» на главной), ведущая на тот же stub-маршрут. Заглушки форм: **`projectFormStub.js`** (иконка `not-found-24.svg`, кнопка «К проекту»). Ошибка загрузки — сообщение и ссылка «К проектам».
+- **`#/tasks` (`tasksList.js`):** **`renderTasksListPage(appRoot, searchParams)`**, **`fetchTasks`** (Bearer, query фильтров), **`fetchProjects`**, **`fetchMe`**; шапка с вкладками **Проекты** (`#/home`), **ТЗ** (активная; **`.app-header__tab--current`**), **Коллекции**, **Медиа**, затем **Администрирование** для админа (паттерн в **`nav/dashboardTabs.js`**). Шапка (flex): вкладки слева, кнопки справа. Поле поиска по имени задачи находится под шапкой и занимает полную ширину контейнера (~300 ms debounce). Ниже поиска — панель фильтров (селекты проект и статус, даты дедлайна с/по); **`history.replaceState`** для сохранения фильтров в hash. Карточки по образцу страницы проекта, строка-ссылка на **`#/project/:id`**.
+- **`#/project/:id`:** экран **`projectDetail.js`:** **`fetchProjectById(id)`** → **`GET /api/projects/:id`**; шапка с «назад», заголовок проекта, кнопка **редактирования** (ведёт на заглушку `#/project/:id/edit`); блок сведений о проекте (цель, даты, статус, опционально обложка); секция **Технические задания:** заголовок и кнопка со **`list-24.svg`** ведут на **`#/tasks?projectId=id`**; текстовая ссылка **«Добавить ТЗ»** — на **`#/project/:id/tasks/new`** (заглушка **`projectFormStub.js`**). Секции **Коллекции** и **Мультимедиа**: заголовок по-прежнему ведёт на **`…/collections/new`** / **`…/media/new`**; сетки и заглушки как раньше. Ошибка загрузки проекта — сообщение и «К проектам».
 
 Пример добавления страницы: ветка в том же `route()` после нормализации пути → вызов `render…Page(appRoot)` из `js/pages/…`.
 
@@ -64,6 +67,7 @@ client/
       session.js   # токен и снимок пользователя
     pages/         # один файл — один экран
       home.js
+      tasksList.js
       login.js
       register.js
       admin.js
@@ -73,6 +77,9 @@ client/
     api/           # обёртки fetch
       auth.js
       projects.js
+      tasks.js
+    nav/
+      dashboardTabs.js
 ```
 
 Каталоги `js/components/` и `js/utils/` — по мере появления повторения; локальный хелпер `el()` внутри страницы допустим.
@@ -82,6 +89,7 @@ client/
 - Базовый URL: **`/api`** (константа `apiBase` в модулях).
 - **`auth.js`:** `fetchRegisterOptions`, `register`, `login`, `fetchMe` (для `fetchMe` — заголовок `Authorization: Bearer` через `getToken()`).
 - **`projects.js`:** `fetchProjects`, **`fetchProjectById`**, **`fetchProjectCreateOptions`**, **`createProject`** (Bearer; детали и создание — по правилам сервера).
+- **`tasks.js`:** **`fetchTasks(filters)`** — Bearer, объект опциональных query-параметров для **`GET /api/tasks`**.
 - **`fetch`** + **`async/await`**; **`parseJsonSafe`**; при ошибке — **`throw new Error(...)`** с понятным **русским** текстом (из тела при наличии).
 
 ```javascript
@@ -95,7 +103,7 @@ if (!res.ok) throw new Error(data.error || '…');
 
 ## Страницы (`js/pages/`)
 
-- Экспорт: **`render…Page(container)`** (может быть `async`; детали страниц могут принимать доп. аргументы, например id проекта).
+- Экспорт: **`render…Page(container)`** (может быть `async`; аргументы — например `id` или для **`#/tasks`** — **`renderTasksListPage(container, searchParams)`**, где `searchParams` из **`URLSearchParams`** hash).
 - Контент: сборка через DOM API; сообщения статуса/ошибки — блоки с `.message`, модификаторы `.message_error` / `.message_ok`; где уместно — **`aria-live`**.
 
 ## Анти-паттерны

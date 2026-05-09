@@ -2,6 +2,7 @@ import { fetchProjectById } from '../api/projects.js';
 
 const ICON_BACK = '/icons/back-24.svg';
 const ICON_EDIT = '/icons/edit-24.svg';
+const ICON_LIST = '/icons/list-24.svg';
 
 function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -358,13 +359,46 @@ export async function renderProjectDetailPage(container, projectId) {
     return card;
   }
 
-  const hrefTasks = `#/project/${projectId}/tasks/new`;
+  const hrefTasksNew = `#/project/${projectId}/tasks/new`;
+  const hrefTasksList = `#/tasks?projectId=${encodeURIComponent(String(projectId))}`;
   const hrefCollections = `#/project/${projectId}/collections/new`;
   const hrefMedia = `#/project/${projectId}/media/new`;
 
+  const tasksSectionHead = el(
+    'div',
+    { className: 'project-detail__section-head' },
+    el(
+      'h2',
+      { className: 'project-detail__section-title project-detail__section-title--tasks' },
+      el('a', {
+        className: 'project-detail__section-heading',
+        href: hrefTasksList,
+        textContent: 'Технические задания',
+      }),
+      el(
+        'a',
+        {
+          className: 'button button-ghost button-icon project-detail__section-list-btn',
+          href: hrefTasksList,
+          'aria-label': 'Список всех технических заданий проекта',
+          title: 'Список технических заданий',
+        },
+        el('img', {
+          className: 'header-toolbar__icon',
+          src: ICON_LIST,
+          alt: '',
+          width: 24,
+          height: 24,
+          decoding: 'async',
+        }),
+      ),
+    ),
+    el('a', { className: 'project-detail__section-add', href: hrefTasksNew, textContent: 'Добавить ТЗ' }),
+  );
+
   const tasksGrid = el('div', { className: 'projects-grid projects-grid--detail' });
   if (tasks.length === 0) {
-    tasksGrid.append(buildSectionCreateCard(hrefTasks, 'Добавить ТЗ'));
+    tasksGrid.append(buildSectionCreateCard(hrefTasksNew, 'Добавить ТЗ'));
   } else {
     tasks.forEach((t) => tasksGrid.append(buildTaskCard(t)));
   }
@@ -389,7 +423,7 @@ export async function renderProjectDetailPage(container, projectId) {
     el(
       'section',
       { className: 'project-detail__section' },
-      el('h2', { className: 'project-detail__section-title' }, sectionHeading(hrefTasks, 'Технические задания')),
+      tasksSectionHead,
       tasksGrid,
     ),
     el(

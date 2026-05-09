@@ -16,6 +16,7 @@ alwaysApply: true
 - `src/routes/health.js` — health и проверка БД.
 - `src/routes/auth.js` — регистрация, логин, JWT, `/auth/me`.
 - `src/routes/projects.js` — список проектов, опции формы создания (`GET …/create-options`), создание (`POST`, в т.ч. `user_project`).
+- `src/routes/tasks.js` — список задач (ТЗ) с фильтрами (`GET /tasks`).
 - `db_init/init.js` — создание БД и схемы, seed справочников.
 - `package.json` — зависимости и скрипты серверной части.
 
@@ -24,8 +25,9 @@ alwaysApply: true
 - `index.html` — оболочка SPA, `#app`, подключение `js/app.js`.
 - `styles/` — общие стили (например `main.css`).
 - `js/app.js` — bootstrap и hash-роутер.
-- `js/pages/` — экраны: `home`, `login`, `register`, `admin`, `projectNew`, `projectDetail` и др.
-- `js/api/` — обёртки `fetch` к `/api` (`auth.js`; `projects.js` — `fetchProjects`, `createProject`).
+- `js/nav/` — при необходимости общая навигация (например `dashboardTabs.js` для вкладок разделов).
+- `js/pages/` — экраны: `home`, `tasksList`, `login`, `register`, `admin`, `projectNew`, `projectDetail` и др.
+- `js/api/` — обёртки `fetch` к `/api` (`auth.js`, `projects.js`, `tasks.js` — `fetchTasks`).
 - `js/auth/session.js` — токен и снимок пользователя в `sessionStorage`.
 - `icons/` — SVG-иконки (при необходимости).
 

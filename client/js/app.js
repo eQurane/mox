@@ -6,8 +6,17 @@ import { renderAdminPage } from './pages/admin.js';
 import { renderProjectNewPage } from './pages/projectNew.js';
 import { renderProjectDetailPage } from './pages/projectDetail.js';
 import { renderProjectFormStub } from './pages/projectFormStub.js';
+import { renderTasksListPage } from './pages/tasksList.js';
 
 const appRoot = document.getElementById('app');
+
+function parseHashParts() {
+  const rawFull = location.hash.replace(/^#\/?/, '');
+  const qIdx = rawFull.indexOf('?');
+  const normalized = (qIdx >= 0 ? rawFull.slice(0, qIdx) : rawFull) || 'login';
+  const queryStr = qIdx >= 0 ? rawFull.slice(qIdx + 1) : '';
+  return { rawFull, normalized, searchParams: new URLSearchParams(queryStr) };
+}
 
 function segmentsFromNormalized(normalized) {
   return normalized.split('/').filter(Boolean);
@@ -19,14 +28,14 @@ function isProtectedRoute(normalized) {
   if (segs[0] === 'project' && segs[1]) return true;
   if (segs[0] === 'projects' && segs[1] === 'new') return true;
   if (segs[0] === 'admin' && segs.length === 1) return true;
+  if (segs[0] === 'tasks' && segs.length === 1) return true;
   return false;
 }
 
 function route() {
-  const raw = location.hash.replace(/^#\/?/, '');
-  const normalized = raw || 'login';
+  const { rawFull, normalized, searchParams } = parseHashParts();
 
-  if (!raw) {
+  if (!rawFull) {
     history.replaceState(null, '', '#/login');
   }
 
@@ -105,6 +114,11 @@ function route() {
 
   if (normalized === 'home') {
     renderHomePage(appRoot);
+    return;
+  }
+
+  if (segs[0] === 'tasks' && segs.length === 1) {
+    renderTasksListPage(appRoot, searchParams);
     return;
   }
 
