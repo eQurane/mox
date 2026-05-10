@@ -177,6 +177,7 @@ export async function renderCollectionsListPage(container, searchParams) {
   const nav = el('nav', { className: 'app-header__nav', 'aria-label': 'Разделы' });
   appendDashboardSectionTabs(nav, {
     active: 'collections',
+    roleName: user.roleName,
     isAdmin: user.roleName === 'Админ',
   });
   brand.append(nav);

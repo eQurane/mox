@@ -28,6 +28,9 @@ router.get('/tasks', requireAuth, async (req, res) => {
     if (!roleName) {
       return res.status(401).json({ error: 'Пользователь не найден.' });
     }
+    if (roleName === 'Клиент' || roleName === 'Внешний подрядчик') {
+      return res.status(403).json({ error: 'Недостаточно прав.' });
+    }
 
     const seeAll = ROLES_ALL_PROJECTS.has(roleName);
 

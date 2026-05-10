@@ -1,12 +1,16 @@
 /** @param {'home' | 'tasks' | 'collections' | 'media' | 'admin'} active */
-export function appendDashboardSectionTabs(nav, { active, isAdmin }) {
-  nav.append(
-    elTab('Проекты', '#/home', active === 'home'),
-    elTab('ТЗ', '#/tasks', active === 'tasks'),
-    elTab('Коллекции', '#/collections', active === 'collections'),
-    elTab('Медиа', '#/media', active === 'media'),
-  );
-  if (isAdmin) {
+export function appendDashboardSectionTabs(nav, { active, roleName, isAdmin }) {
+  if (roleName !== 'Внешний подрядчик') {
+    nav.append(elTab('Проекты', '#/home', active === 'home'));
+  }
+  if (roleName !== 'Клиент' && roleName !== 'Внешний подрядчик') {
+    nav.append(
+      elTab('ТЗ', '#/tasks', active === 'tasks'),
+      elTab('Коллекции', '#/collections', active === 'collections'),
+      elTab('Медиа', '#/media', active === 'media'),
+    );
+  }
+  if (isAdmin || roleName === 'Админ') {
     nav.append(elTab('Администрирование', '#/admin', active === 'admin'));
   }
 }

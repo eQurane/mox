@@ -122,16 +122,34 @@ function route() {
   }
 
   if (segs[0] === 'tasks' && segs.length === 1) {
+    const roleName = getUserSnapshot()?.roleName;
+    if (roleName === 'Клиент' || roleName === 'Внешний подрядчик') {
+      history.replaceState(null, '', '#/home');
+      renderHomePage(appRoot);
+      return;
+    }
     renderTasksListPage(appRoot, searchParams);
     return;
   }
 
   if (segs[0] === 'collections' && segs.length === 1) {
+    const roleName = getUserSnapshot()?.roleName;
+    if (roleName === 'Клиент' || roleName === 'Внешний подрядчик') {
+      history.replaceState(null, '', '#/home');
+      renderHomePage(appRoot);
+      return;
+    }
     renderCollectionsListPage(appRoot, searchParams);
     return;
   }
 
   if (segs[0] === 'media' && segs.length === 1) {
+    const roleName = getUserSnapshot()?.roleName;
+    if (roleName === 'Клиент' || roleName === 'Внешний подрядчик') {
+      history.replaceState(null, '', '#/home');
+      renderHomePage(appRoot);
+      return;
+    }
     renderMediaListPage(appRoot, searchParams);
     return;
   }

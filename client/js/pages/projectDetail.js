@@ -1,4 +1,5 @@
 import { fetchProjectById } from '../api/projects.js';
+import { getUserSnapshot } from '../auth/session.js';
 
 const ICON_BACK = '/icons/back-24.svg';
 const ICON_EDIT = '/icons/edit-24.svg';
@@ -187,6 +188,9 @@ export async function renderProjectDetailPage(container, projectId) {
   const collections = Array.isArray(data.collections) ? data.collections : [];
   const media = Array.isArray(data.media) ? data.media : [];
 
+  const user = getUserSnapshot() || {};
+  const roleName = user.roleName;
+
   const taskById = new Map(tasks.map((t) => [t.id, t]));
   const collById = new Map(collections.map((c) => [c.id, c]));
 
@@ -195,10 +199,12 @@ export async function renderProjectDetailPage(container, projectId) {
     pageTitle.textContent = project.name;
   }
 
-  editBtn.hidden = false;
-  editBtn.addEventListener('click', () => {
-    location.hash = `#/project/${projectId}/edit`;
-  });
+  if (roleName !== 'Клиент') {
+    editBtn.hidden = false;
+    editBtn.addEventListener('click', () => {
+      location.hash = `#/project/${projectId}/edit`;
+    });
+  }
 
   const slug = statusSlug(project.statusName);
   const heroMedia = el('div', { className: 'project-detail__hero-media project-card__media project-card__media--placeholder' });
@@ -263,16 +269,18 @@ export async function renderProjectDetailPage(container, projectId) {
         className: 'project-card__muted',
         textContent: `Роль: ${task.roleName ?? '—'}`,
       }),
-      el('a', {
-        className: 'project-card__muted project-card__project-link',
-        href: collectionsHref,
-        textContent: 'Коллекции',
-      }),
-      el('a', {
-        className: 'project-card__muted project-card__project-link',
-        href: mediaHref,
-        textContent: 'Медиа',
-      }),
+      ...(roleName !== 'Клиент' ? [
+        el('a', {
+          className: 'project-card__muted project-card__project-link',
+          href: collectionsHref,
+          textContent: 'Коллекции',
+        }),
+        el('a', {
+          className: 'project-card__muted project-card__project-link',
+          href: mediaHref,
+          textContent: 'Медиа',
+        })
+      ] : []),
       el(
         'div',
         { className: 'project-card__footer' },
@@ -373,12 +381,15 @@ export async function renderProjectDetailPage(container, projectId) {
     el(
       'h2',
       { className: 'project-detail__section-title project-detail__section-title--tasks' },
-      el('a', {
+      roleName !== 'Клиент' ? el('a', {
         className: 'project-detail__section-heading',
         href: hrefTasksList,
         textContent: 'Технические задания',
+      }) : el('span', {
+        className: 'project-detail__section-heading',
+        textContent: 'Технические задания',
       }),
-      el(
+      roleName !== 'Клиент' ? el(
         'a',
         {
           className: 'button button-ghost button-icon project-detail__section-list-btn',
@@ -394,21 +405,29 @@ export async function renderProjectDetailPage(container, projectId) {
           height: 24,
           decoding: 'async',
         }),
-      ),
+      ) : null,
     ),
-    el('a', { className: 'project-detail__section-add', href: hrefTasksNew, textContent: 'Добавить ТЗ' }),
+    roleName !== 'Клиент' ? el('a', { className: 'project-detail__section-add', href: hrefTasksNew, textContent: 'Добавить ТЗ' }) : null,
   );
 
   const tasksGrid = el('div', { className: 'projects-grid projects-grid--detail' });
   if (tasks.length === 0) {
-    tasksGrid.append(buildSectionCreateCard(hrefTasksNew, 'Добавить ТЗ'));
+    if (roleName !== 'Клиент') {
+      tasksGrid.append(buildSectionCreateCard(hrefTasksNew, 'Добавить ТЗ'));
+    } else {
+      tasksGrid.append(el('p', { className: 'project-detail__muted', textContent: 'Нет технических заданий.' }));
+    }
   } else {
     tasks.forEach((t) => tasksGrid.append(buildTaskCard(t)));
   }
 
   const colGrid = el('div', { className: 'projects-grid projects-grid--detail' });
   if (collections.length === 0) {
-    colGrid.append(buildSectionCreateCard(hrefCollectionsNew, 'Новая коллекция'));
+    if (roleName !== 'Клиент') {
+      colGrid.append(buildSectionCreateCard(hrefCollectionsNew, 'Новая коллекция'));
+    } else {
+      colGrid.append(el('p', { className: 'project-detail__muted', textContent: 'Нет коллекций.' }));
+    }
   } else {
     collections.forEach((c) => colGrid.append(buildCollectionCard(c)));
   }
@@ -419,12 +438,15 @@ export async function renderProjectDetailPage(container, projectId) {
     el(
       'h2',
       { className: 'project-detail__section-title project-detail__section-title--tasks' },
-      el('a', {
+      roleName !== 'Клиент' ? el('a', {
         className: 'project-detail__section-heading',
         href: hrefCollectionsList,
         textContent: 'Коллекции',
+      }) : el('span', {
+        className: 'project-detail__section-heading',
+        textContent: 'Коллекции',
       }),
-      el(
+      roleName !== 'Клиент' ? el(
         'a',
         {
           className: 'button button-ghost button-icon project-detail__section-list-btn',
@@ -440,14 +462,18 @@ export async function renderProjectDetailPage(container, projectId) {
           height: 24,
           decoding: 'async',
         }),
-      ),
+      ) : null,
     ),
-    el('a', { className: 'project-detail__section-add', href: hrefCollectionsNew, textContent: 'Новая коллекция' }),
+    roleName !== 'Клиент' ? el('a', { className: 'project-detail__section-add', href: hrefCollectionsNew, textContent: 'Новая коллекция' }) : null,
   );
 
   const mediaGrid = el('div', { className: 'projects-grid projects-grid--detail' });
   if (media.length === 0) {
-    mediaGrid.append(buildSectionCreateCard(hrefMedia, 'Добавить медиа'));
+    if (roleName !== 'Клиент') {
+      mediaGrid.append(buildSectionCreateCard(hrefMedia, 'Добавить медиа'));
+    } else {
+      mediaGrid.append(el('p', { className: 'project-detail__muted', textContent: 'Нет медиа.' }));
+    }
   } else {
     media.forEach((m) => mediaGrid.append(buildMediaCard(m)));
   }
@@ -458,12 +484,15 @@ export async function renderProjectDetailPage(container, projectId) {
     el(
       'h2',
       { className: 'project-detail__section-title project-detail__section-title--tasks' },
-      el('a', {
+      roleName !== 'Клиент' ? el('a', {
         className: 'project-detail__section-heading',
         href: hrefMediaList,
         textContent: 'Мультимедиа',
+      }) : el('span', {
+        className: 'project-detail__section-heading',
+        textContent: 'Мультимедиа',
       }),
-      el(
+      roleName !== 'Клиент' ? el(
         'a',
         {
           className: 'button button-ghost button-icon project-detail__section-list-btn',
@@ -479,9 +508,9 @@ export async function renderProjectDetailPage(container, projectId) {
           height: 24,
           decoding: 'async',
         }),
-      ),
+      ) : null,
     ),
-    el('a', { className: 'project-detail__section-add', href: hrefMedia, textContent: 'Добавить медиа' }),
+    roleName !== 'Клиент' ? el('a', { className: 'project-detail__section-add', href: hrefMedia, textContent: 'Добавить медиа' }) : null,
   );
 
   const sections = el(

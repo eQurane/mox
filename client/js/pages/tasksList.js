@@ -205,6 +205,7 @@ export async function renderTasksListPage(container, searchParams) {
   const nav = el('nav', { className: 'app-header__nav', 'aria-label': 'Разделы' });
   appendDashboardSectionTabs(nav, {
     active: 'tasks',
+    roleName: user.roleName,
     isAdmin: user.roleName === 'Админ',
   });
   brand.append(nav);

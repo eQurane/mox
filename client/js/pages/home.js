@@ -156,6 +156,7 @@ export async function renderHomePage(container) {
   const nav = el('nav', { className: 'app-header__nav', 'aria-label': 'Разделы' });
   appendDashboardSectionTabs(nav, {
     active: 'home',
+    roleName: user.roleName,
     isAdmin: user.roleName === 'Админ',
   });  brand.append(nav);
 
