@@ -1,5 +1,5 @@
 import { fetchProjectById } from '../api/projects.js';
-import { createTask, fetchTaskCreateOptions } from '../api/tasks.js';
+import { fetchTaskById, fetchTaskCreateOptions, updateTask } from '../api/tasks.js';
 import {
   attachClearError,
   clearFieldErrors,
@@ -9,26 +9,32 @@ import {
   toDatetimeLocalMin,
   toDateInputValue,
 } from './projectFormShared.js';
-import { fieldsForTaskApiError } from './taskFormShared.js';
+import { fieldsForTaskApiError, toDatetimeLocalInputValue } from './taskFormShared.js';
 
 /**
  * @param {HTMLElement} container
  * @param {string} projectId
+ * @param {string} taskId
  */
-export async function renderTaskNewPage(container, projectId) {
+export async function renderTaskEditPage(container, projectId, taskId) {
   container.innerHTML = '';
 
-  const main = el('main', { className: 'page register-page project-new-page' });
+  const main = el(
+    'main',
+    {
+      className: 'page register-page project-new-page task-edit-page',
+    },
+  );
   const card = el('div', { className: 'register-card' });
 
-  const title = el('h1', { className: 'register-title', textContent: 'Новое техническое задание' });
+  const title = el('h1', { className: 'register-title', textContent: 'Редактирование технического задания' });
   const backBtn = el(
     'button',
     {
       type: 'button',
       className: 'button button-ghost button-icon',
-      'aria-label': 'Назад к проекту',
-      title: 'Назад к проекту',
+      'aria-label': 'Назад к техническому заданию',
+      title: 'Назад к ТЗ',
     },
     el('img', {
       className: 'header-toolbar__icon',
@@ -40,7 +46,7 @@ export async function renderTaskNewPage(container, projectId) {
     }),
   );
   backBtn.addEventListener('click', () => {
-    location.hash = `#/project/${projectId}`;
+    location.hash = `#/project/${projectId}/tasks/${taskId}`;
   });
 
   const header = el('div', { className: 'register-card__header' }, title, backBtn);
@@ -68,22 +74,41 @@ export async function renderTaskNewPage(container, projectId) {
   main.append(card);
   container.append(main);
 
-  let project;
+  let payload;
+  let projectPayload;
   let options;
   try {
-    [project, options] = await Promise.all([fetchProjectById(projectId), fetchTaskCreateOptions()]);
+    [payload, projectPayload, options] = await Promise.all([
+      fetchTaskById(taskId),
+      fetchProjectById(projectId),
+      fetchTaskCreateOptions(),
+    ]);
   } catch (err) {
     loading.remove();
     showMessage(err.message || 'Не удалось загрузить данные.', true);
-    const back = el(
+    card.append(el(
       'a',
-      { className: 'button button-ghost', href: `#/project/${projectId}`, textContent: 'К проекту' },
-    );
-    card.append(back);
+      { className: 'button button-ghost', href: `#/project/${projectId}/tasks/${taskId}`, textContent: 'К ТЗ' },
+    ));
     return;
   }
 
-  const projectData = project.project ?? project;
+  const task = payload.task ?? {};
+  if (task.projectId != null && Number(task.projectId) !== Number(projectId)) {
+    loading.remove();
+    showMessage('Это техническое задание относится к другому проекту.', true);
+    card.append(el(
+      'a',
+      {
+        className: 'button button-ghost',
+        href: `#/project/${encodeURIComponent(String(task.projectId))}/tasks/${encodeURIComponent(String(taskId))}/edit`,
+        textContent: 'Открыть в правильном проекте',
+      },
+    ));
+    return;
+  }
+
+  const projectData = projectPayload.project ?? projectPayload;
   const startIso = toDateInputValue(projectData.startDate);
   const endIso = toDateInputValue(projectData.endDate);
   const deadlineMin = toDatetimeLocalMin(projectData.startDate);
@@ -94,52 +119,60 @@ export async function renderTaskNewPage(container, projectId) {
   const statuses = options.statuses ?? [];
   const taskRoles = options.taskRoles ?? [];
 
-  const nameInput = el('input', { id: 'task-name', name: 'name', type: 'text', autocomplete: 'off', required: true });
+  const nameInput = el('input', { id: 'task-name-edit', name: 'name', type: 'text', autocomplete: 'off', required: true });
+  nameInput.value = task.name ?? '';
   const descInput = el('textarea', {
-    id: 'task-desc',
+    id: 'task-desc-edit',
     name: 'description',
     rows: '5',
     autocomplete: 'off',
   });
+  descInput.value = task.description ?? '';
+
   const deadlineInput = el('input', {
-    id: 'task-deadline',
+    id: 'task-deadline-edit',
     name: 'deadline',
     type: 'datetime-local',
     required: true,
   });
   if (deadlineMin) deadlineInput.min = deadlineMin;
   if (deadlineMax) deadlineInput.max = deadlineMax;
+  deadlineInput.value = toDatetimeLocalInputValue(task.deadline);
 
-  const roleSelect = el('select', { id: 'task-role', name: 'roleId', required: true });
+  const roleSelect = el('select', { id: 'task-role-edit', name: 'roleId', required: true });
   for (const r of taskRoles) {
     roleSelect.append(el('option', { value: String(r.id), textContent: r.name }));
   }
-  if (taskRoles.length) roleSelect.selectedIndex = 0;
+  const taskRoleNum = Number(task.roleId);
+  if (Number.isInteger(taskRoleNum) && taskRoles.some((r) => r.id === taskRoleNum)) {
+    roleSelect.value = String(taskRoleNum);
+  } else if (taskRoles.length) roleSelect.selectedIndex = 0;
 
-  const statusSelect = el('select', { id: 'task-status', name: 'statusId', required: true });
+  const statusSelect = el('select', { id: 'task-status-edit', name: 'statusId', required: true });
   for (const s of statuses) {
     statusSelect.append(el('option', { value: String(s.id), textContent: s.name }));
   }
-  const defaultStatus = statuses.find((s) => s.name === 'К выполнению');
-  if (defaultStatus) statusSelect.value = String(defaultStatus.id);
-  else if (statuses.length) statusSelect.selectedIndex = 0;
+  const sid = Number(task.statusId);
+  if (Number.isInteger(sid) && statuses.some((s) => s.id === sid)) {
+    statusSelect.value = String(sid);
+  } else if (statuses.length) statusSelect.selectedIndex = 0;
 
   const wrapName = el(
     'div',
     { className: 'field' },
-    el('label', { htmlFor: 'task-name', textContent: 'Название' }),
+    el('label', { htmlFor: 'task-name-edit', textContent: 'Название' }),
     nameInput,
   );
   const wrapDesc = el(
     'div',
     { className: 'field' },
-    el('label', { htmlFor: 'task-desc', textContent: 'Описание' }),
+    el('label', { htmlFor: 'task-desc-edit', textContent: 'Описание' }),
     descInput,
   );
   const wrapDeadline = el(
     'div',
     { className: 'field' },
-    el('label', { htmlFor: 'task-deadline', textContent: 'Дедлайн (дата и время)' }),
+    el('label', { htmlFor: 'task-deadline-edit', textContent: 'Дедлайн (дата и время)' }),
     el('p', {
       className: 'register-muted',
       textContent: `В пределах сроков проекта, местное время: ${startIso} 00:00 — ${endIso} 23:59`,
@@ -149,13 +182,13 @@ export async function renderTaskNewPage(container, projectId) {
   const wrapRole = el(
     'div',
     { className: 'field' },
-    el('label', { htmlFor: 'task-role', textContent: 'Роль исполнителя ТЗ' }),
+    el('label', { htmlFor: 'task-role-edit', textContent: 'Роль исполнителя ТЗ' }),
     roleSelect,
   );
   const wrapStatus = el(
     'div',
     { className: 'field' },
-    el('label', { htmlFor: 'task-status', textContent: 'Статус' }),
+    el('label', { htmlFor: 'task-status-edit', textContent: 'Статус' }),
     statusSelect,
   );
 
@@ -186,6 +219,20 @@ export async function renderTaskNewPage(container, projectId) {
   attachClearError(wrapRole, [roleSelect]);
   attachClearError(wrapStatus, [statusSelect]);
 
+  const saveBtn = el(
+    'button',
+    { type: 'submit', className: 'button primary button--label-icon' },
+    el('img', {
+      className: 'header-toolbar__icon',
+      src: '/icons/save-24.svg',
+      alt: '',
+      width: 24,
+      height: 24,
+      decoding: 'async',
+    }),
+    el('span', { textContent: 'Сохранить' }),
+  );
+
   const form = el(
     'form',
     { className: 'register-form', novalidate: true },
@@ -194,7 +241,7 @@ export async function renderTaskNewPage(container, projectId) {
     wrapDeadline,
     wrapRole,
     wrapStatus,
-    el('button', { type: 'submit', className: 'button primary', textContent: 'Создать ТЗ' }),
+    saveBtn,
   );
 
   card.append(form);
@@ -255,28 +302,25 @@ export async function renderTaskNewPage(container, projectId) {
       return;
     }
 
-    const submitBtn = form.querySelector('button[type="submit"]');
-    submitBtn.disabled = true;
+    saveBtn.disabled = true;
 
-    const numericProjectId = Number(projectId);
     try {
-      await createTask({
-        projectId: numericProjectId,
+      await updateTask(taskId, {
         name,
         description,
         deadline: deadlineInstant.toISOString(),
         roleId: roleIdVal,
         statusId: statusIdVal,
       });
-      location.hash = `#/project/${projectId}`;
+      location.hash = `#/project/${projectId}/tasks/${taskId}`;
     } catch (err) {
-      const msg = err.message || 'Не удалось создать техническое задание.';
+      const msg = err.message || 'Не удалось сохранить техническое задание.';
       showMessage(msg, true);
       const mapped = fieldsForTaskApiError(msg);
       mapped.forEach((k) => fieldByKey[k]?.classList.add('field--error'));
       focusFirstInvalidKey(mapped);
     } finally {
-      submitBtn.disabled = false;
+      saveBtn.disabled = false;
     }
   });
 }

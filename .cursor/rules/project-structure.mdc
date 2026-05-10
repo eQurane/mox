@@ -16,7 +16,7 @@ alwaysApply: true
 - `src/routes/health.js` — health и проверка БД.
 - `src/routes/auth.js` — регистрация, логин, JWT, `/auth/me`.
 - `src/routes/projects.js` — список проектов, карточка (`GET /:id`), опции формы (`GET …/create-options`), создание (`POST`) и обновление (`PATCH /:id`, в т.ч. `user_project`).
-- `src/routes/tasks.js` — список задач (ТЗ) с фильтрами (`GET /tasks`), опции формы и создание (`GET /tasks/create-options`, `POST /tasks`).
+- `src/routes/tasks.js` — список ТЗ (`GET /tasks`), карточка (`GET /tasks/:id`), опции формы, создание и обновление (`GET …/create-options`, `POST /tasks`, `PATCH /tasks/:id`).
 - `src/routes/collections.js` — список коллекций с фильтрами (`GET /collections`).
 - `src/routes/media.js` — список медиа с фильтрами (`GET /media`).
 - `db_init/init.js` — создание БД и схемы, seed справочников.
@@ -28,8 +28,8 @@ alwaysApply: true
 - `styles/` — общие стили (например `main.css`).
 - `js/app.js` — bootstrap и hash-роутер.
 - `js/nav/` — при необходимости общая навигация (например `dashboardTabs.js` для вкладок разделов).
-- `js/pages/` — экраны: `home`, `tasksList`, `taskNew`, `collectionsList`, `mediaList`, `login`, `register`, `admin`, `projectNew`, `projectDetail` и др.
-- `js/api/` — обёртки `fetch` к `/api` (`auth.js`, `projects.js`, `tasks.js` — `fetchTasks`, `fetchTaskCreateOptions`, `createTask`, `collections.js` — `fetchCollections`, `media.js` — `fetchMedia`).
+- `js/pages/` — экраны: `home`, `tasksList`, `taskNew`, `taskDetail`, `taskEdit`, `collectionsList`, `mediaList`, `login`, `register`, `admin`, `projectNew`, `projectDetail` и др.
+- `js/api/` — обёртки `fetch` к `/api` (`auth.js`, `projects.js`, `tasks.js` — `fetchTasks`, `fetchTaskById`, `fetchTaskCreateOptions`, `createTask`, `updateTask`, `collections.js` — `fetchCollections`, `media.js` — `fetchMedia`).
 - `js/auth/session.js` — токен и снимок пользователя в `sessionStorage`.
 - `icons/` — SVG-иконки (при необходимости).
 

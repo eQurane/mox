@@ -53,6 +53,46 @@ export async function fetchTaskCreateOptions() {
   return data;
 }
 
+/** @param {string | number} id */
+export async function fetchTaskById(id) {
+  const token = getToken();
+  if (!token) {
+    throw new Error('Сессия отсутствует.');
+  }
+  const res = await fetch(`${apiBase}/tasks/${encodeURIComponent(String(id))}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await parseJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(data.error || 'Не удалось загрузить техническое задание.');
+  }
+  return data;
+}
+
+/**
+ * @param {string | number} id
+ * @param {{ name: string, description: string, deadline: string, roleId: number, statusId: number }} payload
+ */
+export async function updateTask(id, payload) {
+  const token = getToken();
+  if (!token) {
+    throw new Error('Сессия отсутствует.');
+  }
+  const res = await fetch(`${apiBase}/tasks/${encodeURIComponent(String(id))}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(data.error || 'Не удалось сохранить техническое задание.');
+  }
+  return data;
+}
+
 /**
  * @param {{ projectId: number, name: string, description: string, deadline: string, roleId: number, statusId: number }} payload
  */

@@ -7,6 +7,8 @@ import { renderProjectNewPage } from './pages/projectNew.js';
 import { renderProjectDetailPage } from './pages/projectDetail.js';
 import { renderProjectEditPage } from './pages/projectEdit.js';
 import { renderProjectFormStub } from './pages/projectFormStub.js';
+import { renderTaskDetailPage } from './pages/taskDetail.js';
+import { renderTaskEditPage } from './pages/taskEdit.js';
 import { renderTaskNewPage } from './pages/taskNew.js';
 import { renderTasksListPage } from './pages/tasksList.js';
 import { renderCollectionsListPage } from './pages/collectionsList.js';
@@ -112,8 +114,23 @@ function route() {
       renderTaskNewPage(appRoot, id);
       return;
     }
+    if (
+      segs[2] === 'tasks'
+      && segs.length === 5
+      && /^\d+$/.test(segs[3])
+      && segs[4] === 'edit'
+    ) {
+      const taskEditRole = getUserSnapshot()?.roleName;
+      if (taskEditRole !== 'Админ' && taskEditRole !== 'Менеджер') {
+        history.replaceState(null, '', '#/home');
+        renderHomePage(appRoot);
+        return;
+      }
+      renderTaskEditPage(appRoot, id, segs[3]);
+      return;
+    }
     if (segs[2] === 'tasks' && segs.length === 4 && /^\d+$/.test(segs[3])) {
-      renderProjectFormStub(appRoot, { projectId: id, variant: 'task-detail' });
+      renderTaskDetailPage(appRoot, id, segs[3]);
       return;
     }
     if (segs[2] === 'collections' && segs[3] === 'new' && segs.length === 4) {

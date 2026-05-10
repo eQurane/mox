@@ -702,6 +702,15 @@ a.button {
   font-weight: 650;
 }
 
+.project-card__detail-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.project-card__detail-title-link:hover {
+  color: var(--accent);
+}
+
 .project-card__goal {
   margin: 0;
   font-size: 0.875rem;

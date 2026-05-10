@@ -130,10 +130,24 @@ function buildTaskListCard(task) {
       : task.id != null
         ? `#/media?taskId=${encodeURIComponent(String(task.id))}`
         : '#/media';
+  const detailHref =
+    task.projectId != null && task.id != null
+      ? `#/project/${encodeURIComponent(String(task.projectId))}/tasks/${encodeURIComponent(String(task.id))}`
+      : null;
+  const titleBlock = detailHref
+    ? el(
+        'a',
+        {
+          className: 'project-card__detail-title-link',
+          href: detailHref,
+        },
+        el('h2', { className: 'project-card__title', textContent: task.name ?? '' }),
+      )
+    : el('h2', { className: 'project-card__title', textContent: task.name ?? '' });
   const body = el(
     'div',
     { className: 'project-card__body' },
-    el('h2', { className: 'project-card__title', textContent: task.name ?? '' }),
+    titleBlock,
     el('p', { className: 'project-card__goal', textContent: task.description ?? '' }),
     el('p', {
       className: 'project-card__dates',
