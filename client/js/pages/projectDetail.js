@@ -199,7 +199,7 @@ export async function renderProjectDetailPage(container, projectId) {
     pageTitle.textContent = project.name;
   }
 
-  if (roleName !== 'Клиент') {
+  if (roleName === 'Админ' || roleName === 'Менеджер') {
     editBtn.hidden = false;
     editBtn.addEventListener('click', () => {
       location.hash = `#/project/${projectId}/edit`;

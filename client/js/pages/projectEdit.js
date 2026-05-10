@@ -1,4 +1,8 @@
-import { createProject, fetchProjectCreateOptions } from '../api/projects.js';
+import {
+  fetchProjectById,
+  fetchProjectCreateOptions,
+  updateProject,
+} from '../api/projects.js';
 import { getUserSnapshot } from '../auth/session.js';
 import {
   DATE_RE,
@@ -9,22 +13,23 @@ import {
   fieldsForApiError,
   setFieldErrors,
   syncDateInputs,
+  toDateInputValue,
 } from './projectFormShared.js';
 
-export async function renderProjectNewPage(container) {
+export async function renderProjectEditPage(container, projectId) {
   container.innerHTML = '';
 
-  const main = el('main', { className: 'page register-page project-new-page' });
+  const main = el('main', { className: 'page register-page project-new-page project-edit-page' });
   const card = el('div', { className: 'register-card' });
 
-  const title = el('h1', { className: 'register-title', textContent: 'Новый проект' });
+  const title = el('h1', { className: 'register-title', textContent: 'Редактирование проекта' });
   const backBtn = el(
     'button',
     {
       type: 'button',
       className: 'button button-ghost button-icon',
-      'aria-label': 'Назад к проектам',
-      title: 'Назад к проектам',
+      'aria-label': 'Назад к проекту',
+      title: 'Назад к проекту',
     },
     el('img', {
       className: 'header-toolbar__icon',
@@ -36,7 +41,7 @@ export async function renderProjectNewPage(container) {
     }),
   );
   backBtn.addEventListener('click', () => {
-    location.hash = '#/home';
+    location.hash = `#/project/${projectId}`;
   });
 
   const header = el('div', { className: 'register-card__header' }, title, backBtn);
@@ -64,9 +69,13 @@ export async function renderProjectNewPage(container) {
   main.append(card);
   container.append(main);
 
+  let projectPayload;
   let options;
   try {
-    options = await fetchProjectCreateOptions();
+    [projectPayload, options] = await Promise.all([
+      fetchProjectById(projectId),
+      fetchProjectCreateOptions(),
+    ]);
   } catch (err) {
     loading.remove();
     showMessage(err.message || 'Не удалось загрузить данные.', true);
@@ -75,18 +84,24 @@ export async function renderProjectNewPage(container) {
 
   loading.remove();
 
+  const project = projectPayload.project ?? {};
   const statuses = options.statuses ?? [];
   const assignableUsers = options.assignableUsers ?? [];
   const me = getUserSnapshot();
+  const memberSet = new Set(project.memberUserIds ?? []);
 
-  const statusSelect = el('select', { id: 'proj-status', name: 'statusId', required: true });
+  const statusSelect = el('select', { id: 'proj-status-edit', name: 'statusId', required: true });
   for (const s of statuses) {
     statusSelect.append(el('option', { value: String(s.id), textContent: s.name }));
   }
-
-  const defaultStatus = statuses.find((s) => s.name === 'Запланированный');
-  if (defaultStatus) statusSelect.value = String(defaultStatus.id);
-  else if (statuses.length) statusSelect.selectedIndex = 0;
+  const sid = project.statusId;
+  if (sid != null && statuses.some((s) => s.id === sid)) {
+    statusSelect.value = String(sid);
+  } else {
+    const fallback = statuses.find((s) => s.name === 'Запланированный');
+    if (fallback) statusSelect.value = String(fallback.id);
+    else if (statuses.length) statusSelect.selectedIndex = 0;
+  }
 
   const participantListRoot = el('div', { className: 'participant-picker__list' });
   if (assignableUsers.length === 0) {
@@ -99,10 +114,16 @@ export async function renderProjectNewPage(container) {
     );
   } else {
     for (const u of assignableUsers) {
+      const checked = memberSet.has(u.id);
       const row = el(
         'label',
         { className: 'participant-picker__row' },
-        el('input', { type: 'checkbox', name: 'participantIds', value: String(u.id) }),
+        el('input', {
+          type: 'checkbox',
+          name: 'participantIds',
+          value: String(u.id),
+          ...(checked ? { checked: true } : {}),
+        }),
         el(
           'span',
           { className: 'participant-picker__meta' },
@@ -118,45 +139,68 @@ export async function renderProjectNewPage(container) {
     }
   }
 
-  const nameInput = el('input', { id: 'proj-name', name: 'name', type: 'text', autocomplete: 'off', required: true });
+  const nameInput = el('input', {
+    id: 'proj-name-edit',
+    name: 'name',
+    type: 'text',
+    autocomplete: 'off',
+    required: true,
+    value: project.name ?? '',
+  });
   const goalInput = el('textarea', {
-    id: 'proj-goal',
+    id: 'proj-goal-edit',
     name: 'goal',
     rows: '5',
     autocomplete: 'off',
     required: true,
   });
-  const startInput = el('input', { id: 'proj-start', name: 'startDate', type: 'date', required: true });
-  const endInput = el('input', { id: 'proj-end', name: 'endDate', type: 'date', required: true });
+  goalInput.value = project.goal ?? '';
+
+  const startVal = toDateInputValue(project.startDate);
+  const endVal = toDateInputValue(project.endDate);
+  const startInput = el('input', {
+    id: 'proj-start-edit',
+    name: 'startDate',
+    type: 'date',
+    required: true,
+    value: startVal,
+  });
+  const endInput = el('input', {
+    id: 'proj-end-edit',
+    name: 'endDate',
+    type: 'date',
+    required: true,
+    value: endVal,
+  });
 
   const wrapName = el(
     'div',
     { className: 'field' },
-    el('label', { htmlFor: 'proj-name', textContent: 'Название' }),
+    el('label', { htmlFor: 'proj-name-edit', textContent: 'Название' }),
     nameInput,
   );
   const wrapGoal = el(
     'div',
     { className: 'field' },
-    el('label', { htmlFor: 'proj-goal', textContent: 'Цель' }),
+    el('label', { htmlFor: 'proj-goal-edit', textContent: 'Цель' }),
     goalInput,
   );
   const wrapStart = el(
     'div',
     { className: 'field' },
-    el('label', { htmlFor: 'proj-start', textContent: 'Дата начала' }),
+    el('label', { htmlFor: 'proj-start-edit', textContent: 'Дата начала' }),
     startInput,
   );
   const wrapEnd = el(
     'div',
     { className: 'field' },
-    el('label', { htmlFor: 'proj-end', textContent: 'Дата окончания' }),
+    el('label', { htmlFor: 'proj-end-edit', textContent: 'Дата окончания' }),
     endInput,
   );
   const wrapStatus = el(
     'div',
     { className: 'field' },
-    el('label', { htmlFor: 'proj-status', textContent: 'Статус проекта' }),
+    el('label', { htmlFor: 'proj-status-edit', textContent: 'Статус проекта' }),
     statusSelect,
   );
 
@@ -215,6 +259,20 @@ export async function renderProjectNewPage(container) {
   attachClearError(wrapStatus, [statusSelect]);
   attachClearError(wrapParticipants, participantCheckboxes());
 
+  const saveBtn = el(
+    'button',
+    { type: 'submit', className: 'button primary button--label-icon' },
+    el('img', {
+      className: 'header-toolbar__icon',
+      src: '/icons/save-24.svg',
+      alt: '',
+      width: 24,
+      height: 24,
+      decoding: 'async',
+    }),
+    el('span', { textContent: 'Сохранить' }),
+  );
+
   const form = el(
     'form',
     { className: 'register-form', novalidate: true },
@@ -224,7 +282,7 @@ export async function renderProjectNewPage(container) {
     wrapStart,
     wrapEnd,
     wrapParticipants,
-    el('button', { type: 'submit', className: 'button primary', textContent: 'Создать проект' }),
+    saveBtn,
   );
 
   card.append(form);
@@ -299,11 +357,10 @@ export async function renderProjectNewPage(container) {
       return;
     }
 
-    const submitBtn = form.querySelector('button[type="submit"]');
-    submitBtn.disabled = true;
+    saveBtn.disabled = true;
 
     try {
-      const { project } = await createProject({
+      await updateProject(projectId, {
         name,
         goal,
         startDate,
@@ -311,13 +368,9 @@ export async function renderProjectNewPage(container) {
         statusId: statusIdVal,
         participantIds,
       });
-      if (project?.id != null) {
-        location.hash = `#/project/${project.id}`;
-        return;
-      }
-      showMessage('Проект создан, но не удалось открыть карточку.', true);
+      location.hash = `#/project/${projectId}`;
     } catch (err) {
-      const msg = err.message || 'Не удалось создать проект.';
+      const msg = err.message || 'Не удалось сохранить проект.';
       showMessage(msg, true);
       const mapped = fieldsForApiError(msg, {
         nameOk: Boolean(name),
@@ -326,7 +379,7 @@ export async function renderProjectNewPage(container) {
       mapped.forEach((k) => fieldByKey[k]?.classList.add('field--error'));
       focusFirstInvalidKey(mapped);
     } finally {
-      submitBtn.disabled = false;
+      saveBtn.disabled = false;
     }
   });
 }

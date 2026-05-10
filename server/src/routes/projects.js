@@ -26,6 +26,131 @@ async function fetchRoleNameByUserId(db, userId) {
   return roleResult.rows[0]?.role_name ?? null;
 }
 
+/** Id активных участников проекта (включая любую роль), для формы и PATCH. */
+async function fetchActiveMemberUserIds(db, projectId) {
+  const r = await db.query(
+    `SELECT user_id FROM user_project
+     WHERE project_id = $1 AND excluded_at IS NULL
+     ORDER BY user_id`,
+    [projectId],
+  );
+  return r.rows.map((row) => row.user_id);
+}
+
+/** Id пользователей, которые могут отображаться в чекбоксах формы (как в create-options). */
+async function fetchAssignableUserIdsForEditor(db, editorUserId, roleName) {
+  const assignableRoles =
+    roleName === 'Админ'
+      ? ASSIGNABLE_ROLE_NAMES.Админ
+      : ASSIGNABLE_ROLE_NAMES.Менеджер;
+  const roleNamesArr = [...assignableRoles];
+  const usersResult = await db.query(
+    `SELECT u.id
+       FROM users u
+       JOIN roles r ON r.id = u.role_id
+       JOIN statuses_users su ON su.id = u.status_id
+      WHERE su.name = $1 AND r.name = ANY($2::text[]) AND u.id <> $3`,
+    [ACTIVE_USER_STATUS, roleNamesArr, editorUserId],
+  );
+  return new Set(usersResult.rows.map((row) => row.id));
+}
+
+/**
+ * Общая валидация тела создания/обновления проекта.
+ * @returns {{ ok: true, name, goal, startDate, endDate, statusId, participantIdsUnique, resolvedStatusName, assignableRoles } | { ok: false, status: number, error: string }}
+ */
+async function validateProjectWritePayload(pool, body, editorRoleName, reqUserId) {
+  const assignableRoles =
+    editorRoleName === 'Админ'
+      ? ASSIGNABLE_ROLE_NAMES.Админ
+      : ASSIGNABLE_ROLE_NAMES.Менеджер;
+
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  const goal = typeof body.goal === 'string' ? body.goal.trim() : '';
+  const startDate = typeof body.startDate === 'string' ? body.startDate.trim() : '';
+  const endDate = typeof body.endDate === 'string' ? body.endDate.trim() : '';
+  const statusId = Number(body.statusId);
+  let rawParticipantIds = body.participantIds;
+  if (rawParticipantIds == null) rawParticipantIds = [];
+  if (!Array.isArray(rawParticipantIds)) {
+    return { ok: false, status: 400, error: 'Список участников должен быть массивом идентификаторов.' };
+  }
+
+  if (!name || !goal) {
+    return { ok: false, status: 400, error: 'Укажите название и цель проекта.' };
+  }
+  if (!DATE_RE.test(startDate) || !DATE_RE.test(endDate)) {
+    return { ok: false, status: 400, error: 'Даты должны быть в формате ГГГГ-ММ-ДД.' };
+  }
+  if (endDate <= startDate) {
+    return { ok: false, status: 400, error: 'Дата окончания должна быть позже даты начала.' };
+  }
+
+  const floor = initDateFloor();
+  if (startDate < floor) {
+    return { ok: false, status: 400, error: `Дата начала не может быть раньше ${floor}.` };
+  }
+
+  if (!Number.isInteger(statusId) || statusId < 1) {
+    return { ok: false, status: 400, error: 'Укажите статус проекта из списка.' };
+  }
+
+  const statusRow = await pool.query(`SELECT id, name FROM statuses_projects WHERE id = $1`, [statusId]);
+  const resolvedStatusName = statusRow.rows[0]?.name;
+  if (!resolvedStatusName) {
+    return { ok: false, status: 400, error: 'Выберите корректный статус проекта.' };
+  }
+
+  const numericParticipantIds = [];
+  for (const raw of rawParticipantIds) {
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < 1) {
+      return { ok: false, status: 400, error: 'Некорректный идентификатор участника.' };
+    }
+    numericParticipantIds.push(n);
+  }
+
+  const participantIdsUnique = [...new Set(numericParticipantIds)].filter((id) => id !== reqUserId);
+
+  if (participantIdsUnique.length > 0) {
+    const pv = await pool.query(
+      `SELECT u.id, r.name AS role_name
+       FROM users u
+       JOIN roles r ON r.id = u.role_id
+       JOIN statuses_users su ON su.id = u.status_id
+       WHERE u.id = ANY($1::int[])
+         AND su.name = $2`,
+      [participantIdsUnique, ACTIVE_USER_STATUS],
+    );
+
+    if (pv.rows.length !== participantIdsUnique.length) {
+      return { ok: false, status: 400, error: 'Один из выбранных пользователей недоступен или не найден.' };
+    }
+
+    for (const row of pv.rows) {
+      if (!assignableRoles.has(row.role_name)) {
+        return {
+          ok: false,
+          status: 403,
+          error: 'Вы не можете добавить в проект пользователя с этой ролью.',
+        };
+      }
+    }
+  }
+
+  return {
+    ok: true,
+    name,
+    goal,
+    startDate,
+    endDate,
+    statusId,
+    participantIdsUnique,
+    resolvedStatusName,
+    assignableRoles,
+  };
+}
+
 router.get('/projects/create-options', requireAuth, async (req, res) => {
   try {
     const roleName = await fetchRoleNameByUserId(pool, req.userId);
@@ -162,6 +287,7 @@ router.get('/projects/:id', requireAuth, async (req, res) => {
              p.goal,
              p.start_date,
              p.end_date,
+             p.status_id,
              sp.name AS status_name,
              (
                SELECT m.path
@@ -193,14 +319,18 @@ router.get('/projects/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Проект не найден.' });
     }
 
+    const memberUserIds = await fetchActiveMemberUserIds(pool, projectId);
+
     const project = {
       id: prow.id,
       name: prow.name,
       goal: prow.goal,
       startDate: prow.start_date,
       endDate: prow.end_date,
+      statusId: prow.status_id,
       statusName: prow.status_name,
       coverPath: prow.cover_path,
+      memberUserIds,
     };
 
     const tasksResult = await pool.query(
@@ -300,82 +430,20 @@ router.post('/projects', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Недостаточно прав для создания проекта.' });
     }
 
-    const assignableRoles =
-      roleName === 'Админ'
-        ? ASSIGNABLE_ROLE_NAMES.Админ
-        : ASSIGNABLE_ROLE_NAMES.Менеджер;
-
-    const body = req.body ?? {};
-    const name = typeof body.name === 'string' ? body.name.trim() : '';
-    const goal = typeof body.goal === 'string' ? body.goal.trim() : '';
-    const startDate = typeof body.startDate === 'string' ? body.startDate.trim() : '';
-    const endDate = typeof body.endDate === 'string' ? body.endDate.trim() : '';
-    const statusId = Number(body.statusId);
-    let rawParticipantIds = body.participantIds;
-    if (rawParticipantIds == null) rawParticipantIds = [];
-    if (!Array.isArray(rawParticipantIds)) {
-      return res.status(400).json({ error: 'Список участников должен быть массивом идентификаторов.' });
+    const validated = await validateProjectWritePayload(pool, req.body ?? {}, roleName, req.userId);
+    if (!validated.ok) {
+      return res.status(validated.status).json({ error: validated.error });
     }
 
-    if (!name || !goal) {
-      return res.status(400).json({ error: 'Укажите название и цель проекта.' });
-    }
-    if (!DATE_RE.test(startDate) || !DATE_RE.test(endDate)) {
-      return res.status(400).json({ error: 'Даты должны быть в формате ГГГГ-ММ-ДД.' });
-    }
-    if (endDate <= startDate) {
-      return res.status(400).json({ error: 'Дата окончания должна быть позже даты начала.' });
-    }
-
-    const floor = initDateFloor();
-    if (startDate < floor) {
-      return res.status(400).json({ error: `Дата начала не может быть раньше ${floor}.` });
-    }
-
-    if (!Number.isInteger(statusId) || statusId < 1) {
-      return res.status(400).json({ error: 'Укажите статус проекта из списка.' });
-    }
-
-    const statusRow = await pool.query(`SELECT id, name FROM statuses_projects WHERE id = $1`, [statusId]);
-    const resolvedStatusName = statusRow.rows[0]?.name;
-    if (!resolvedStatusName) {
-      return res.status(400).json({ error: 'Выберите корректный статус проекта.' });
-    }
-
-    const numericParticipantIds = [];
-    for (const raw of rawParticipantIds) {
-      const n = Number(raw);
-      if (!Number.isInteger(n) || n < 1) {
-        return res.status(400).json({ error: 'Некорректный идентификатор участника.' });
-      }
-      numericParticipantIds.push(n);
-    }
-
-    const participantIdsUnique = [...new Set(numericParticipantIds)].filter((id) => id !== req.userId);
-
-    if (participantIdsUnique.length > 0) {
-      const pv = await pool.query(
-        `SELECT u.id, r.name AS role_name
-         FROM users u
-         JOIN roles r ON r.id = u.role_id
-         JOIN statuses_users su ON su.id = u.status_id
-         WHERE u.id = ANY($1::int[])
-           AND su.name = $2`,
-        [participantIdsUnique, ACTIVE_USER_STATUS],
-      );
-
-      if (pv.rows.length !== participantIdsUnique.length) {
-        return res.status(400).json({ error: 'Один из выбранных пользователей недоступен или не найден.' });
-      }
-
-      for (const row of pv.rows) {
-        if (!assignableRoles.has(row.role_name)) {
-          return res.status(403).json({
-            error: 'Вы не можете добавить в проект пользователя с этой ролью.',
-          });
-        }
-      }
-    }
+    const {
+      name,
+      goal,
+      startDate,
+      endDate,
+      statusId,
+      participantIdsUnique,
+      resolvedStatusName,
+    } = validated;
 
     client = await pool.connect();
     await client.query('BEGIN');
@@ -421,6 +489,154 @@ router.post('/projects', requireAuth, async (req, res) => {
     }
     console.error(err);
     res.status(500).json({ error: 'Не удалось создать проект.' });
+  } finally {
+    if (client) client.release();
+  }
+});
+
+router.patch('/projects/:id', requireAuth, async (req, res) => {
+  let client;
+  try {
+    const rawId = req.params.id;
+    const projectId = Number(rawId);
+    if (!Number.isInteger(projectId) || projectId < 1) {
+      return res.status(400).json({ error: 'Некорректный идентификатор проекта.' });
+    }
+
+    const roleName = await fetchRoleNameByUserId(pool, req.userId);
+    if (!roleName) {
+      return res.status(401).json({ error: 'Пользователь не найден.' });
+    }
+    if (!ROLES_ALL_PROJECTS.has(roleName)) {
+      return res.status(403).json({ error: 'Недостаточно прав.' });
+    }
+
+    const seeAll = ROLES_ALL_PROJECTS.has(roleName);
+
+    const access = await pool.query(
+      `SELECT p.id
+         FROM projects p
+        WHERE p.id = $1
+          AND (
+            $2 IS TRUE
+            OR EXISTS (
+              SELECT 1
+                FROM user_project up
+               WHERE up.project_id = p.id
+                 AND up.user_id = $3
+                 AND up.excluded_at IS NULL
+            )
+          )`,
+      [projectId, seeAll, req.userId],
+    );
+    if (!access.rows[0]) {
+      return res.status(404).json({ error: 'Проект не найден.' });
+    }
+
+    const validated = await validateProjectWritePayload(pool, req.body ?? {}, roleName, req.userId);
+    if (!validated.ok) {
+      return res.status(validated.status).json({ error: validated.error });
+    }
+
+    const {
+      name,
+      goal,
+      startDate,
+      endDate,
+      statusId,
+      participantIdsUnique,
+      resolvedStatusName,
+    } = validated;
+
+    const assignableSelectableIds = await fetchAssignableUserIdsForEditor(pool, req.userId, roleName);
+
+    client = await pool.connect();
+    await client.query('BEGIN');
+
+    const currentActive = await fetchActiveMemberUserIds(client, projectId);
+    const currentActiveSet = new Set(currentActive);
+
+    const finalMemberIds = new Set([req.userId, ...participantIdsUnique]);
+    for (const uid of currentActive) {
+      if (!assignableSelectableIds.has(uid)) {
+        finalMemberIds.add(uid);
+      }
+    }
+
+    const toRemove = currentActive.filter((uid) => !finalMemberIds.has(uid));
+    const toAdd = [...finalMemberIds].filter((uid) => !currentActiveSet.has(uid));
+
+    const updProject = await client.query(
+      `UPDATE projects
+         SET name = $1,
+             goal = $2,
+             start_date = $3::date,
+             end_date = $4::date,
+             status_id = $5
+       WHERE id = $6
+       RETURNING id, name, goal, start_date, end_date`,
+      [name, goal, startDate, endDate, statusId, projectId],
+    );
+    const projRow = updProject.rows[0];
+
+    for (const uid of toRemove) {
+      await client.query(
+        `UPDATE user_project
+            SET excluded_at = NOW()
+          WHERE project_id = $1
+            AND user_id = $2
+            AND excluded_at IS NULL`,
+        [projectId, uid],
+      );
+    }
+
+    for (const uid of toAdd) {
+      const reactivate = await client.query(
+        `UPDATE user_project
+            SET excluded_at = NULL
+          WHERE id = (
+                  SELECT id
+                    FROM user_project
+                   WHERE project_id = $1
+                     AND user_id = $2
+                     AND excluded_at IS NOT NULL
+                   ORDER BY id DESC
+                   LIMIT 1
+                )
+          RETURNING id`,
+        [projectId, uid],
+      );
+      if (reactivate.rowCount === 0) {
+        await client.query(
+          `INSERT INTO user_project (user_id, project_id, included_at, excluded_at)
+           VALUES ($1, $2, NOW(), NULL)`,
+          [uid, projectId],
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+
+    res.json({
+      project: {
+        id: projRow.id,
+        name: projRow.name,
+        goal: projRow.goal,
+        startDate: projRow.start_date,
+        endDate: projRow.end_date,
+        statusName: resolvedStatusName,
+      },
+    });
+  } catch (err) {
+    if (client) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (_) {
+        /* noop */
+      }
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Не удалось сохранить проект.' });
   } finally {
     if (client) client.release();
   }

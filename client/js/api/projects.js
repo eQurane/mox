@@ -75,3 +75,24 @@ export async function createProject(payload) {
   }
   return data;
 }
+
+export async function updateProject(id, payload) {
+  const token = getToken();
+  if (!token) {
+    throw new Error('Сессия отсутствует.');
+  }
+  const encoded = encodeURIComponent(String(id));
+  const res = await fetch(`${apiBase}/projects/${encoded}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(data.error || 'Не удалось сохранить проект.');
+  }
+  return data;
+}

@@ -177,6 +177,12 @@ body {
   background: linear-gradient(135deg, var(--accent-hover), #1e40af);
 }
 
+.button--label-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .message {
   margin: 0 0 12px;
   min-height: 1em;

@@ -15,7 +15,7 @@ alwaysApply: true
 - `src/middleware/auth.js` — `Bearer`-токен, `requireAuth`.
 - `src/routes/health.js` — health и проверка БД.
 - `src/routes/auth.js` — регистрация, логин, JWT, `/auth/me`.
-- `src/routes/projects.js` — список проектов, опции формы создания (`GET …/create-options`), создание (`POST`, в т.ч. `user_project`).
+- `src/routes/projects.js` — список проектов, карточка (`GET /:id`), опции формы (`GET …/create-options`), создание (`POST`) и обновление (`PATCH /:id`, в т.ч. `user_project`).
 - `src/routes/tasks.js` — список задач (ТЗ) с фильтрами (`GET /tasks`).
 - `src/routes/collections.js` — список коллекций с фильтрами (`GET /collections`).
 - `src/routes/media.js` — список медиа с фильтрами (`GET /media`).

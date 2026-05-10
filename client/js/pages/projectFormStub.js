@@ -29,10 +29,6 @@ function el(tag, attrs = {}, ...children) {
 }
 
 const COPY = {
-  edit: {
-    title: 'Редактирование проекта',
-    lead: 'Форма появится в следующей версии.',
-  },
   'tasks-new': {
     title: 'Новое техническое задание',
     lead: 'Форма появится в следующей версии.',
@@ -48,7 +44,7 @@ const COPY = {
 };
 
 /**
- * Заглушка будущих форм проекта (редактирование, ТЗ, коллекции, медиа).
+ * Заглушка будущих форм (ТЗ, коллекции, медиа).
  * @param {HTMLElement} container
  * @param {{ projectId: string, variant: keyof COPY }} options
  */
