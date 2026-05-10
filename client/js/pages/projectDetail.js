@@ -283,8 +283,10 @@ export async function renderProjectDetailPage(container, projectId) {
   }
 
   function buildCollectionCard(col) {
-    const card = el('article', {
-      className: 'project-card project-card--static project-card--status-unknown',
+    const colHref = `#/project/${encodeURIComponent(String(projectId))}/collections/${encodeURIComponent(String(col.id))}`;
+    const card = el('a', {
+      className: 'project-card project-card--static project-card--link project-card--status-unknown',
+      href: colHref,
     });
     const taskTitle = taskById.get(col.taskId)?.name ?? '—';
     const body = el(

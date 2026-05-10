@@ -102,22 +102,32 @@ function syncHash(filters) {
   }
 }
 
+/** Для карточки-ссылки: переход по hash без вложенных `<a>`. */
+function hashNavControl(text, hash) {
+  const span = el('span', {
+    className: 'project-card__muted project-card__project-link project-card__hash-link',
+    role: 'link',
+    tabIndex: 0,
+    textContent: text,
+  });
+  const go = (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    const h = hash.startsWith('#') ? hash : `#${hash}`;
+    location.hash = h;
+  };
+  span.addEventListener('click', go);
+  span.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter' || ev.key === ' ') {
+      ev.preventDefault();
+      go(ev);
+    }
+  });
+  return span;
+}
+
 function buildTaskListCard(task) {
   const tslug = taskStatusSlug(task.statusName);
-  const card = el('article', {
-    className: `project-card project-card--static project-card--status-${tslug}`,
-  });
-  const projectLink =
-    task.projectId != null
-      ? el('a', {
-          className: 'project-card__muted project-card__project-link',
-          href: `#/project/${encodeURIComponent(task.projectId)}`,
-          textContent: `Проект: ${task.projectName ?? '—'}`,
-        })
-      : el('p', {
-          className: 'project-card__muted',
-          textContent: `Проект: ${task.projectName ?? '—'}`,
-        });
   const collectionsHref =
     task.projectId != null && task.id != null
       ? `#/collections?projectId=${encodeURIComponent(String(task.projectId))}&taskId=${encodeURIComponent(String(task.id))}`
@@ -134,20 +144,12 @@ function buildTaskListCard(task) {
     task.projectId != null && task.id != null
       ? `#/project/${encodeURIComponent(String(task.projectId))}/tasks/${encodeURIComponent(String(task.id))}`
       : null;
-  const titleBlock = detailHref
-    ? el(
-        'a',
-        {
-          className: 'project-card__detail-title-link',
-          href: detailHref,
-        },
-        el('h2', { className: 'project-card__title', textContent: task.name ?? '' }),
-      )
-    : el('h2', { className: 'project-card__title', textContent: task.name ?? '' });
+
+  const mediaTop = el('div', { className: 'project-card__media project-card__media--placeholder' });
   const body = el(
     'div',
     { className: 'project-card__body' },
-    titleBlock,
+    el('h2', { className: 'project-card__title', textContent: task.name ?? '' }),
     el('p', { className: 'project-card__goal', textContent: task.description ?? '' }),
     el('p', {
       className: 'project-card__dates',
@@ -157,6 +159,50 @@ function buildTaskListCard(task) {
       className: 'project-card__muted',
       textContent: `Роль: ${task.roleName ?? '—'}`,
     }),
+    el(
+      'div',
+      { className: 'project-card__footer' },
+      el('span', {
+        className: `project-card__badge project-card__badge--${tslug}`,
+        textContent: task.statusName ?? '—',
+      }),
+    ),
+  );
+
+  if (detailHref) {
+    const card = el('a', {
+      className: `project-card project-card--static project-card--link project-card--status-${tslug}`,
+      href: detailHref,
+    });
+    const footer = body.querySelector('.project-card__footer');
+    const projectCtl =
+      task.projectId != null
+        ? hashNavControl(`Проект: ${task.projectName ?? '—'}`, `#/project/${encodeURIComponent(String(task.projectId))}`)
+        : el('p', {
+            className: 'project-card__muted',
+            textContent: `Проект: ${task.projectName ?? '—'}`,
+          });
+    footer.before(projectCtl, hashNavControl('Коллекции', collectionsHref), hashNavControl('Медиа', mediaHref));
+    card.append(mediaTop, body);
+    return card;
+  }
+
+  const card = el('article', {
+    className: `project-card project-card--static project-card--status-${tslug}`,
+  });
+  const projectLink =
+    task.projectId != null
+      ? el('a', {
+          className: 'project-card__muted project-card__project-link',
+          href: `#/project/${encodeURIComponent(task.projectId)}`,
+          textContent: `Проект: ${task.projectName ?? '—'}`,
+        })
+      : el('p', {
+          className: 'project-card__muted',
+          textContent: `Проект: ${task.projectName ?? '—'}`,
+        });
+  const footerEl = body.querySelector('.project-card__footer');
+  footerEl.before(
     projectLink,
     el('a', {
       className: 'project-card__muted project-card__project-link',
@@ -168,16 +214,8 @@ function buildTaskListCard(task) {
       href: mediaHref,
       textContent: 'Медиа',
     }),
-    el(
-      'div',
-      { className: 'project-card__footer' },
-      el('span', {
-        className: `project-card__badge project-card__badge--${tslug}`,
-        textContent: task.statusName ?? '—',
-      }),
-    ),
   );
-  card.append(el('div', { className: 'project-card__media project-card__media--placeholder' }), body);
+  card.append(mediaTop, body);
   return card;
 }
 

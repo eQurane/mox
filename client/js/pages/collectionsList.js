@@ -112,13 +112,11 @@ function syncHash(filters) {
 }
 
 function buildCollectionCard(col) {
-  const card = el('article', {
-    className: 'project-card project-card--static project-card--status-unknown',
-  });
-  const projectLink = el('a', {
-    className: 'project-card__muted project-card__project-link',
-    href: `#/project/${encodeURIComponent(col.projectId)}`,
-    textContent: `Проект: ${col.projectName ?? '—'}`,
+  const detailHref =
+    `#/project/${encodeURIComponent(String(col.projectId))}/collections/${encodeURIComponent(String(col.id))}`;
+  const card = el('a', {
+    className: 'project-card project-card--static project-card--link project-card--status-unknown',
+    href: detailHref,
   });
   const body = el(
     'div',
@@ -130,10 +128,13 @@ function buildCollectionCard(col) {
       textContent: `Техническое задание: ${col.taskName ?? '—'}`,
     }),
     el('p', {
+      className: 'project-card__muted',
+      textContent: `Проект: ${col.projectName ?? '—'}`,
+    }),
+    el('p', {
       className: 'project-card__dates',
       textContent: `Создано: ${formatDateTimeRu(col.createdAt)} · Изменено: ${formatDateTimeRu(col.lastEditedAt)}`,
     }),
-    projectLink,
   );
   card.append(el('div', { className: 'project-card__media project-card__media--placeholder' }), body);
   return card;

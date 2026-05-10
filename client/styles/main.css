@@ -888,6 +888,15 @@ a.button {
   margin: 0;
   font-size: 0.9rem;
   color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.35rem;
+  row-gap: 0.2rem;
+}
+
+.project-detail__dates-segment {
+  white-space: nowrap;
 }
 
 .project-detail__badge-row {
@@ -1013,6 +1022,17 @@ a.button {
   display: inline-block;
   margin-top: 4px;
   font-size: 0.875rem;
+}
+
+.project-card__hash-link {
+  cursor: pointer;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.project-card__hash-link:hover {
+  color: var(--accent-hover);
 }
 
 .project-detail__section-heading {

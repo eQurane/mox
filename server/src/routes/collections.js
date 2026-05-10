@@ -22,6 +22,46 @@ function escapeIlikePattern(value) {
   return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 }
 
+/**
+ * @param {import('express').Response} res
+ * @returns {Promise<string | null>}
+ */
+async function requireManagerOrAdmin(res, userId) {
+  const roleName = await fetchRoleNameByUserId(pool, userId);
+  if (!roleName) {
+    res.status(401).json({ error: 'Пользователь не найден.' });
+    return null;
+  }
+  if (!ROLES_ALL_PROJECTS.has(roleName)) {
+    res.status(403).json({ error: 'Недостаточно прав.' });
+    return null;
+  }
+  return roleName;
+}
+
+/** Проект доступен редактору (как при PATCH/POST задачи). */
+async function fetchProjectDatesIfVisible(projectId, userId, roleName) {
+  const seeAll = ROLES_ALL_PROJECTS.has(roleName);
+  const r = await pool.query(
+    `SELECT p.start_date::text AS start_date, p.end_date::text AS end_date
+       FROM projects p
+      WHERE p.id = $1
+        AND (
+          $2::boolean IS TRUE
+          OR EXISTS (
+            SELECT 1 FROM user_project up
+            WHERE up.project_id = p.id
+              AND up.user_id = $3
+              AND up.excluded_at IS NULL
+          )
+        )`,
+    [projectId, seeAll, userId],
+  );
+  const row = r.rows[0];
+  if (!row) return null;
+  return { startDate: row.start_date, endDate: row.end_date };
+}
+
 router.get('/collections', requireAuth, async (req, res) => {
   try {
     const roleName = await fetchRoleNameByUserId(pool, req.userId);
@@ -244,6 +284,216 @@ router.get('/collections', requireAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Не удалось загрузить коллекции.' });
+  }
+});
+
+router.get('/collections/:id', requireAuth, async (req, res) => {
+  try {
+    const rawId = req.params.id;
+    const collectionId = Number(rawId);
+    if (!Number.isInteger(collectionId) || collectionId < 1) {
+      return res.status(400).json({ error: 'Некорректный идентификатор коллекции.' });
+    }
+
+    const roleName = await fetchRoleNameByUserId(pool, req.userId);
+    if (!roleName) {
+      return res.status(401).json({ error: 'Пользователь не найден.' });
+    }
+    if (roleName === 'Внешний подрядчик') {
+      return res.status(403).json({ error: 'Недостаточно прав.' });
+    }
+
+    const seeAll = ROLES_ALL_PROJECTS.has(roleName);
+
+    const collSql = `
+      SELECT c.id,
+             c.task_id,
+             c.name,
+             c.description,
+             c.created_at,
+             c.last_edited_at,
+             t.project_id,
+             p.name AS project_name,
+             t.name AS task_name
+        FROM collections c
+        JOIN tasks t ON t.id = c.task_id
+        JOIN projects p ON p.id = t.project_id
+       WHERE c.id = $1
+         AND (
+           $2::boolean IS TRUE
+           OR EXISTS (
+             SELECT 1 FROM user_project up
+             WHERE up.project_id = t.project_id
+               AND up.user_id = $3
+               AND up.excluded_at IS NULL
+           )
+         )
+    `;
+
+    const collResult = await pool.query(collSql, [collectionId, seeAll, req.userId]);
+    const crow = collResult.rows[0];
+    if (!crow) {
+      return res.status(404).json({ error: 'Коллекция не найдена.' });
+    }
+
+    const collection = {
+      id: crow.id,
+      taskId: crow.task_id,
+      projectId: crow.project_id,
+      projectName: crow.project_name,
+      taskName: crow.task_name,
+      name: crow.name,
+      description: crow.description ?? '',
+      createdAt: crow.created_at,
+      lastEditedAt: crow.last_edited_at,
+    };
+
+    const mediaResult = await pool.query(
+      `SELECT m.id,
+              m.collection_id,
+              m.path,
+              m.name,
+              m.format,
+              m.description,
+              m.upload_at,
+              sm.name AS status_name
+         FROM media m
+         JOIN statuses_media sm ON sm.id = m.status_id
+        WHERE m.collection_id = $1
+        ORDER BY m.upload_at DESC NULLS LAST, m.id DESC`,
+      [collectionId],
+    );
+
+    const media = mediaResult.rows.map((row) => ({
+      id: row.id,
+      collectionId: row.collection_id,
+      path: row.path,
+      name: row.name,
+      format: row.format,
+      description: row.description ?? '',
+      uploadAt: row.upload_at,
+      statusName: row.status_name,
+    }));
+
+    res.json({ collection, media });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Не удалось загрузить коллекцию.' });
+  }
+});
+
+router.post('/collections', requireAuth, async (req, res) => {
+  try {
+    const roleName = await requireManagerOrAdmin(res, req.userId);
+    if (!roleName) return;
+
+    const taskId = Number(req.body?.taskId);
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+    const description = typeof req.body?.description === 'string' ? req.body.description : '';
+
+    if (!Number.isInteger(taskId) || taskId < 1) {
+      return res.status(400).json({ error: 'Укажите корректное техническое задание.' });
+    }
+    if (!name) {
+      return res.status(400).json({ error: 'Укажите название коллекции.' });
+    }
+
+    const taskRow = await pool.query(`SELECT project_id FROM tasks WHERE id = $1`, [taskId]);
+    const projectId = taskRow.rows[0]?.project_id;
+    if (projectId == null) {
+      return res.status(404).json({ error: 'Техническое задание не найдено.' });
+    }
+
+    const project = await fetchProjectDatesIfVisible(projectId, req.userId, roleName);
+    if (!project) {
+      return res.status(404).json({ error: 'Техническое задание не найдено.' });
+    }
+
+    const ins = await pool.query(
+      `INSERT INTO collections (name, description, created_at, last_edited_at, task_id)
+       VALUES ($1, $2, NOW(), NOW(), $3)
+       RETURNING id, task_id, name, description, created_at, last_edited_at`,
+      [name, description, taskId],
+    );
+
+    const row = ins.rows[0];
+    res.status(201).json({
+      collection: {
+        id: row.id,
+        taskId: row.task_id,
+        projectId,
+        name: row.name,
+        description: row.description ?? '',
+        createdAt: row.created_at,
+        lastEditedAt: row.last_edited_at,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Не удалось создать коллекцию.' });
+  }
+});
+
+router.patch('/collections/:id', requireAuth, async (req, res) => {
+  try {
+    const roleName = await requireManagerOrAdmin(res, req.userId);
+    if (!roleName) return;
+
+    const rawId = req.params.id;
+    const collectionId = Number(rawId);
+    if (!Number.isInteger(collectionId) || collectionId < 1) {
+      return res.status(400).json({ error: 'Некорректный идентификатор коллекции.' });
+    }
+
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+    const description = typeof req.body?.description === 'string' ? req.body.description : '';
+
+    if (!name) {
+      return res.status(400).json({ error: 'Укажите название коллекции.' });
+    }
+
+    const existing = await pool.query(
+      `SELECT t.project_id
+         FROM collections c
+         JOIN tasks t ON t.id = c.task_id
+        WHERE c.id = $1`,
+      [collectionId],
+    );
+    const projectId = existing.rows[0]?.project_id;
+    if (projectId == null) {
+      return res.status(404).json({ error: 'Коллекция не найдена.' });
+    }
+
+    const project = await fetchProjectDatesIfVisible(projectId, req.userId, roleName);
+    if (!project) {
+      return res.status(404).json({ error: 'Коллекция не найдена.' });
+    }
+
+    const upd = await pool.query(
+      `UPDATE collections
+          SET name = $1,
+              description = $2,
+              last_edited_at = NOW()
+        WHERE id = $3
+       RETURNING id, task_id, name, description, created_at, last_edited_at`,
+      [name, description, collectionId],
+    );
+
+    const row = upd.rows[0];
+    res.json({
+      collection: {
+        id: row.id,
+        taskId: row.task_id,
+        projectId,
+        name: row.name,
+        description: row.description ?? '',
+        createdAt: row.created_at,
+        lastEditedAt: row.last_edited_at,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Не удалось обновить коллекцию.' });
   }
 });
 

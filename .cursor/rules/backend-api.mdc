@@ -38,7 +38,10 @@ GET  /api/tasks/:id                 → 200 | 400 | 401 | 403 | 404 | 500  (Bear
 PATCH /api/tasks/:id                → 200 | 400 | 401 | 403 | 404 | 500  (Bearer)
 GET  /api/tasks/create-options      → 200 | 401 | 403 | 500  (Bearer)
 POST /api/tasks                     → 201 | 400 | 401 | 403 | 404 | 500  (Bearer)
-GET  /api/collections               → 200 | 400 | 401 | 500  (Bearer)
+GET  /api/collections               → 200 | 400 | 401 | 403 | 500  (Bearer)
+GET  /api/collections/:id            → 200 | 400 | 401 | 403 | 404 | 500  (Bearer)
+POST /api/collections                → 201 | 400 | 401 | 403 | 404 | 500  (Bearer)
+PATCH /api/collections/:id          → 200 | 400 | 401 | 403 | 404 | 500  (Bearer)
 GET  /api/media                     → 200 | 400 | 401 | 500  (Bearer)
 GET  /api/projects/create-options     → 200 | 401 | 403 | 500  (Bearer)
 POST /api/projects                   → 201 | 400 | 401 | 403 | 500  (Bearer)
@@ -201,7 +204,49 @@ PATCH /api/projects/:id              → 200 | 400 | 401 | 403 | 404 | 500  (Bea
 
 **200:** `{ collections: [{ id, taskId, name, description, createdAt, lastEditedAt, projectId, projectName, taskName }], taskStatuses: [{ id, name }], projectStatuses: [{ id, name }] }` — справочники статусов для фильтров на клиенте (порядок по `id`).
 
-**Ошибки:** `400` — валидация query; `401`; `500`.
+**Ошибки:** `400` — валидация query; `401`; **`403`** (Клиент и Внешний подрядчик на списке); `500`.
+
+### GET `/api/collections/:id`
+
+**Заголовок:** `Authorization: Bearer <token>`.
+
+**Параметр пути:** `id` — целое ≥ 1; иначе **`400`**.
+
+**Видимость:** как **`GET /api/tasks/:id`** по проекту связанной задачи: **Внешний подрядчик** — **`403`**; **Админ** и **Менеджер** — любая коллекция при существующих связях; **Клиент** и **Исполнитель** — только при активном членстве в **`user_project`** для `tasks.project_id`. Нет доступа или нет записи — **`404`** «Коллекция не найдена.».
+
+**200:** `{ collection: { id, taskId, projectId, projectName, taskName, name, description, createdAt, lastEditedAt }, media: [{ id, collectionId, path, name, format, description, uploadAt, statusName }] }` — медиа этой коллекции, порядок по **`upload_at`** убыв.
+
+**Ошибки:** `400`; `401`; `403`; `404`; `500`.
+
+### POST `/api/collections`
+
+**Заголовок:** `Authorization: Bearer <token>`.
+
+**Доступ:** только **Админ** и **Менеджер**; иначе **`403`**.
+
+**Body (JSON):** `taskId` (integer), `name` (string, trim, непустой), `description` (string, допускается пустая).
+
+**Поведение:** задача должна существовать; проект задачи должен быть **виден редактору** так же, как при **`POST /api/tasks`** (через `user_project` / роли). Иначе **`404`** «Техническое задание не найдено.». Вставка: **`created_at`** и **`last_edited_at`** = текущее время.
+
+**201:** `{ collection: { id, taskId, projectId, name, description, createdAt, lastEditedAt } }`.
+
+**Ошибки (JSON):** `400`; `401`; `403`; `404`; `500`.
+
+### PATCH `/api/collections/:id`
+
+**Заголовок:** `Authorization: Bearer <token>`.
+
+**Доступ:** только **Админ** и **Менеджер**; иначе **`403`**.
+
+**Параметр пути:** `id` — целое ≥ 1; иначе **`400`**.
+
+**Видимость записи:** коллекция существует и проект её задачи доступен редактору так же, как при **`PATCH /api/tasks/:id`**; иначе **`404`** «Коллекция не найдена.».
+
+**Body (JSON):** `name` (trim, непустой), `description` (строка). Обновляется **`last_edited_at`** = текущее время.
+
+**200:** `{ collection: { id, taskId, projectId, name, description, createdAt, lastEditedAt } }`.
+
+**Ошибки (JSON):** `400`; `401`; `403`; `404`; `500`.
 
 ### GET `/api/media`
 

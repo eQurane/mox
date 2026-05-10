@@ -232,8 +232,11 @@ export async function renderTaskDetailPage(container, projectId, taskId) {
   const collById = new Map(collections.map((c) => [c.id, c]));
 
   function buildCollectionCard(col) {
-    const card = el('article', {
-      className: 'project-card project-card--static project-card--status-unknown',
+    const colHref =
+      `#/project/${encodeURIComponent(String(projectId))}/collections/${encodeURIComponent(String(col.id))}`;
+    const card = el('a', {
+      className: 'project-card project-card--static project-card--link project-card--status-unknown',
+      href: colHref,
     });
     const body = el(
       'div',
@@ -303,7 +306,8 @@ export async function renderTaskDetailPage(container, projectId, taskId) {
     `#/collections?projectId=${encodeURIComponent(String(projectId))}&taskId=${encodeURIComponent(String(taskId))}`;
   const hrefMediaList =
     `#/media?projectId=${encodeURIComponent(String(projectId))}&taskId=${encodeURIComponent(String(taskId))}`;
-  const hrefCollectionsNew = `#/project/${projectId}/collections/new`;
+  const hrefCollectionsNew =
+    `#/project/${encodeURIComponent(String(projectId))}/tasks/${encodeURIComponent(String(taskId))}/collections/new`;
   const hrefMediaNew = `#/project/${projectId}/media/new`;
 
   const collectionsSectionHead = el(

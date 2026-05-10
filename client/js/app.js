@@ -6,6 +6,9 @@ import { renderAdminPage } from './pages/admin.js';
 import { renderProjectNewPage } from './pages/projectNew.js';
 import { renderProjectDetailPage } from './pages/projectDetail.js';
 import { renderProjectEditPage } from './pages/projectEdit.js';
+import { renderCollectionDetailPage } from './pages/collectionDetail.js';
+import { renderCollectionEditPage } from './pages/collectionEdit.js';
+import { renderCollectionNewPage } from './pages/collectionNew.js';
 import { renderProjectFormStub } from './pages/projectFormStub.js';
 import { renderTaskDetailPage } from './pages/taskDetail.js';
 import { renderTaskEditPage } from './pages/taskEdit.js';
@@ -129,16 +132,61 @@ function route() {
       renderTaskEditPage(appRoot, id, segs[3]);
       return;
     }
+    if (
+      segs[2] === 'tasks'
+      && segs.length === 6
+      && /^\d+$/.test(segs[3])
+      && segs[4] === 'collections'
+      && segs[5] === 'new'
+    ) {
+      const colNewRole = getUserSnapshot()?.roleName;
+      if (colNewRole !== 'Админ' && colNewRole !== 'Менеджер') {
+        history.replaceState(null, '', '#/home');
+        renderHomePage(appRoot);
+        return;
+      }
+      renderCollectionNewPage(appRoot, id, segs[3]);
+      return;
+    }
     if (segs[2] === 'tasks' && segs.length === 4 && /^\d+$/.test(segs[3])) {
       renderTaskDetailPage(appRoot, id, segs[3]);
       return;
     }
     if (segs[2] === 'collections' && segs[3] === 'new' && segs.length === 4) {
-      renderProjectFormStub(appRoot, { projectId: id, variant: 'collections-new' });
+      const colNewRole = getUserSnapshot()?.roleName;
+      if (colNewRole !== 'Админ' && colNewRole !== 'Менеджер') {
+        history.replaceState(null, '', '#/home');
+        renderHomePage(appRoot);
+        return;
+      }
+      renderCollectionNewPage(appRoot, id);
+      return;
+    }
+    if (
+      segs[2] === 'collections'
+      && segs.length === 5
+      && /^\d+$/.test(segs[3])
+      && segs[4] === 'edit'
+    ) {
+      const colEditRole = getUserSnapshot()?.roleName;
+      if (colEditRole !== 'Админ' && colEditRole !== 'Менеджер') {
+        history.replaceState(null, '', '#/home');
+        renderHomePage(appRoot);
+        return;
+      }
+      renderCollectionEditPage(appRoot, id, segs[3]);
+      return;
+    }
+    if (segs[2] === 'collections' && segs.length === 4 && /^\d+$/.test(segs[3])) {
+      renderCollectionDetailPage(appRoot, id, segs[3]);
       return;
     }
     if (segs[2] === 'media' && segs[3] === 'new' && segs.length === 4) {
-      renderProjectFormStub(appRoot, { projectId: id, variant: 'media-new' });
+      renderProjectFormStub(appRoot, {
+        projectId: id,
+        variant: 'media-new',
+        collectionId: searchParams.get('collectionId') ?? undefined,
+      });
       return;
     }
 
