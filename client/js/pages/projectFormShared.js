@@ -126,3 +126,14 @@ export function toDateInputValue(value) {
   if (Number.isNaN(d.getTime())) return '';
   return d.toISOString().slice(0, 10);
 }
+
+/** Границы для input[type=datetime-local] — локальное начало/конец календарного дня. */
+export function toDatetimeLocalMin(value) {
+  const d = toDateInputValue(value);
+  return d ? `${d}T00:00` : '';
+}
+
+export function toDatetimeLocalMax(value) {
+  const d = toDateInputValue(value);
+  return d ? `${d}T23:59` : '';
+}

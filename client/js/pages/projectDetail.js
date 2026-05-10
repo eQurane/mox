@@ -190,6 +190,7 @@ export async function renderProjectDetailPage(container, projectId) {
 
   const user = getUserSnapshot() || {};
   const roleName = user.roleName;
+  const canManageTasks = roleName === 'Админ' || roleName === 'Менеджер';
 
   const taskById = new Map(tasks.map((t) => [t.id, t]));
   const collById = new Map(collections.map((c) => [c.id, c]));
@@ -251,16 +252,15 @@ export async function renderProjectDetailPage(container, projectId) {
 
   function buildTaskCard(task) {
     const tslug = taskStatusSlug(task.statusName);
-    const card = el('article', {
-      className: `project-card project-card--static project-card--status-${tslug}`,
+    const taskHref = `#/project/${projectId}/tasks/${task.id}`;
+    const card = el('a', {
+      className: `project-card project-card--static project-card--link project-card--status-${tslug}`,
+      href: taskHref,
     });
-    const collectionsHref = `#/collections?projectId=${encodeURIComponent(String(projectId))}&taskId=${encodeURIComponent(String(task.id))}`;
-    const mediaHref = `#/media?projectId=${encodeURIComponent(String(projectId))}&taskId=${encodeURIComponent(String(task.id))}`;
     const body = el(
       'div',
       { className: 'project-card__body' },
       el('h2', { className: 'project-card__title', textContent: task.name ?? '' }),
-      el('p', { className: 'project-card__goal', textContent: task.description ?? '' }),
       el('p', {
         className: 'project-card__dates',
         textContent: `Дедлайн: ${formatDateTimeRu(task.deadline)}`,
@@ -269,18 +269,6 @@ export async function renderProjectDetailPage(container, projectId) {
         className: 'project-card__muted',
         textContent: `Роль: ${task.roleName ?? '—'}`,
       }),
-      ...(roleName !== 'Клиент' ? [
-        el('a', {
-          className: 'project-card__muted project-card__project-link',
-          href: collectionsHref,
-          textContent: 'Коллекции',
-        }),
-        el('a', {
-          className: 'project-card__muted project-card__project-link',
-          href: mediaHref,
-          textContent: 'Медиа',
-        })
-      ] : []),
       el(
         'div',
         { className: 'project-card__footer' },
@@ -407,14 +395,14 @@ export async function renderProjectDetailPage(container, projectId) {
         }),
       ) : null,
     ),
-    roleName !== 'Клиент' ? el('a', { className: 'project-detail__section-add', href: hrefTasksNew, textContent: 'Добавить ТЗ' }) : null,
   );
 
   const tasksGrid = el('div', { className: 'projects-grid projects-grid--detail' });
+  if (canManageTasks) {
+    tasksGrid.append(buildSectionCreateCard(hrefTasksNew, 'Добавить ТЗ'));
+  }
   if (tasks.length === 0) {
-    if (roleName !== 'Клиент') {
-      tasksGrid.append(buildSectionCreateCard(hrefTasksNew, 'Добавить ТЗ'));
-    } else {
+    if (!canManageTasks) {
       tasksGrid.append(el('p', { className: 'project-detail__muted', textContent: 'Нет технических заданий.' }));
     }
   } else {
@@ -422,10 +410,11 @@ export async function renderProjectDetailPage(container, projectId) {
   }
 
   const colGrid = el('div', { className: 'projects-grid projects-grid--detail' });
+  if (roleName !== 'Клиент') {
+    colGrid.append(buildSectionCreateCard(hrefCollectionsNew, 'Новая коллекция'));
+  }
   if (collections.length === 0) {
-    if (roleName !== 'Клиент') {
-      colGrid.append(buildSectionCreateCard(hrefCollectionsNew, 'Новая коллекция'));
-    } else {
+    if (roleName === 'Клиент') {
       colGrid.append(el('p', { className: 'project-detail__muted', textContent: 'Нет коллекций.' }));
     }
   } else {
@@ -464,14 +453,14 @@ export async function renderProjectDetailPage(container, projectId) {
         }),
       ) : null,
     ),
-    roleName !== 'Клиент' ? el('a', { className: 'project-detail__section-add', href: hrefCollectionsNew, textContent: 'Новая коллекция' }) : null,
   );
 
   const mediaGrid = el('div', { className: 'projects-grid projects-grid--detail' });
+  if (roleName !== 'Клиент') {
+    mediaGrid.append(buildSectionCreateCard(hrefMedia, 'Добавить медиа'));
+  }
   if (media.length === 0) {
-    if (roleName !== 'Клиент') {
-      mediaGrid.append(buildSectionCreateCard(hrefMedia, 'Добавить медиа'));
-    } else {
+    if (roleName === 'Клиент') {
       mediaGrid.append(el('p', { className: 'project-detail__muted', textContent: 'Нет медиа.' }));
     }
   } else {
@@ -510,7 +499,6 @@ export async function renderProjectDetailPage(container, projectId) {
         }),
       ) : null,
     ),
-    roleName !== 'Клиент' ? el('a', { className: 'project-detail__section-add', href: hrefMedia, textContent: 'Добавить медиа' }) : null,
   );
 
   const sections = el(

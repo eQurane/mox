@@ -1043,6 +1043,15 @@ a.button {
   box-shadow: 0 6px 24px rgba(26, 41, 66, 0.06);
 }
 
+.project-card--static.project-card--link {
+  cursor: pointer;
+}
+
+.project-card--static.project-card--link:hover {
+  box-shadow: 0 10px 28px rgba(26, 41, 66, 0.1);
+  transform: translateY(-1px);
+}
+
 .project-detail__media-card .project-card__img {
   object-fit: contain;
   background: #f1f5f9;

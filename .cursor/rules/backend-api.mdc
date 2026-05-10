@@ -34,6 +34,8 @@ GET  /api/auth/me                    → 200 | 401 | 500  (Bearer)
 GET  /api/projects                   → 200 | 401 | 500  (Bearer)
 GET  /api/projects/:id               → 200 | 400 | 401 | 404 | 500  (Bearer)
 GET  /api/tasks                     → 200 | 400 | 401 | 500  (Bearer)
+GET  /api/tasks/create-options      → 200 | 401 | 403 | 500  (Bearer)
+POST /api/tasks                     → 201 | 400 | 401 | 403 | 404 | 500  (Bearer)
 GET  /api/collections               → 200 | 400 | 401 | 500  (Bearer)
 GET  /api/media                     → 200 | 400 | 401 | 500  (Bearer)
 GET  /api/projects/create-options     → 200 | 401 | 403 | 500  (Bearer)
@@ -124,6 +126,30 @@ PATCH /api/projects/:id              → 200 | 400 | 401 | 403 | 404 | 500  (Bea
 **200:** `{ tasks: [{ id, projectId, projectName, name, description, deadline, roleName, statusId, statusName }], statuses: [{ id, name }] }` — `statuses` — полный справочник статусов задач для фильтров (порядок по `id`).
 
 **Ошибки:** `400` — валидация query; `401`; `500`.
+
+### GET `/api/tasks/create-options`
+
+**Заголовок:** `Authorization: Bearer <token>`.
+
+**Доступ:** только **Админ** и **Менеджер**; иначе **`403`**.
+
+**200:** `{ statuses: [{ id, name }], taskRoles: [{ id, name }] }` — статусы из `statuses_tasks` (порядок по `id`); `taskRoles` — роли **«Исполнитель»** и **«Внешний подрядчик»** из `roles` (для поля `tasks.role_id` при создании ТЗ).
+
+**Ошибки:** `401`, `403`, `500`.
+
+### POST `/api/tasks`
+
+**Заголовок:** `Authorization: Bearer <token>`.
+
+**Доступ:** только **Админ** и **Менеджер**; иначе **`403`**.
+
+**Body (JSON):** `projectId` (integer), `name` (string), `description` (string), `deadline` — **`YYYY-MM-DD`** или строка **ISO 8601** (дата и время, например с клиента `toISOString()`), `roleId` (integer — одна из `taskRoles`), `statusId` (integer — `statuses_tasks.id`).
+
+**Поведение:** trim `name`, непустое; `description` — строка (допускается пустая); календарная дата дедлайна (по UTC из сохранённого момента) должна попадать в **[start_date, end_date]** проекта включительно и не раньше **`INIT_DATE`**; проект должен быть видим редактору по тем же правилам, что **`GET /api/projects/:id`**.
+
+**201:** `{ task: { id, projectId, name, description, deadline, roleId, roleName, statusId, statusName } }`.
+
+**Ошибки (JSON):** `400` — валидация; `401`; `403`; `404` — проект не найден; `500` — БД.
 
 ### GET `/api/collections`
 

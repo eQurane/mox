@@ -37,3 +37,41 @@ export async function fetchTasks(filters = {}) {
   }
   return data;
 }
+
+export async function fetchTaskCreateOptions() {
+  const token = getToken();
+  if (!token) {
+    throw new Error('Сессия отсутствует.');
+  }
+  const res = await fetch(`${apiBase}/tasks/create-options`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await parseJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(data.error || 'Не удалось загрузить параметры формы.');
+  }
+  return data;
+}
+
+/**
+ * @param {{ projectId: number, name: string, description: string, deadline: string, roleId: number, statusId: number }} payload
+ */
+export async function createTask(payload) {
+  const token = getToken();
+  if (!token) {
+    throw new Error('Сессия отсутствует.');
+  }
+  const res = await fetch(`${apiBase}/tasks`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(data.error || 'Не удалось создать техническое задание.');
+  }
+  return data;
+}
