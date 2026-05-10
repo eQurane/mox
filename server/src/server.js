@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import healthRouter from './routes/health.js';
@@ -9,11 +10,14 @@ import projectsRouter from './routes/projects.js';
 import tasksRouter from './routes/tasks.js';
 import collectionsRouter from './routes/collections.js';
 import mediaRouter from './routes/media.js';
+import { storageDir } from './paths.js';
 
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientDir = path.join(__dirname, '..', '..', 'client');
+
+fs.mkdirSync(storageDir, { recursive: true });
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,6 +25,8 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use('/storage', express.static(storageDir));
 
 app.use('/api', healthRouter);
 app.use('/api', authRouter);

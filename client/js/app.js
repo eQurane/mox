@@ -9,7 +9,7 @@ import { renderProjectEditPage } from './pages/projectEdit.js';
 import { renderCollectionDetailPage } from './pages/collectionDetail.js';
 import { renderCollectionEditPage } from './pages/collectionEdit.js';
 import { renderCollectionNewPage } from './pages/collectionNew.js';
-import { renderProjectFormStub } from './pages/projectFormStub.js';
+import { renderMediaNewPage } from './pages/mediaNew.js';
 import { renderTaskDetailPage } from './pages/taskDetail.js';
 import { renderTaskEditPage } from './pages/taskEdit.js';
 import { renderTaskNewPage } from './pages/taskNew.js';
@@ -182,11 +182,13 @@ function route() {
       return;
     }
     if (segs[2] === 'media' && segs[3] === 'new' && segs.length === 4) {
-      renderProjectFormStub(appRoot, {
-        projectId: id,
-        variant: 'media-new',
-        collectionId: searchParams.get('collectionId') ?? undefined,
-      });
+      const mediaNewRole = getUserSnapshot()?.roleName;
+      if (mediaNewRole !== 'Админ' && mediaNewRole !== 'Менеджер') {
+        history.replaceState(null, '', '#/home');
+        renderHomePage(appRoot);
+        return;
+      }
+      renderMediaNewPage(appRoot, id, searchParams);
       return;
     }
 

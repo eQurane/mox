@@ -37,10 +37,6 @@ const COPY = {
     title: 'Новая коллекция',
     lead: 'Форма появится в следующей версии.',
   },
-  'media-new': {
-    title: 'Добавление мультимедиа',
-    lead: 'Форма появится в следующей версии.',
-  },
   'task-detail': {
     title: 'Техническое задание',
     lead: 'Карточка ТЗ будет доступна позже.',
@@ -48,12 +44,12 @@ const COPY = {
 };
 
 /**
- * Заглушка будущих форм (ТЗ, коллекции, медиа).
+ * Заглушка будущих форм (ТЗ, коллекции).
  * @param {HTMLElement} container
- * @param {{ projectId: string, variant: keyof COPY, collectionId?: string }} options
+ * @param {{ projectId: string, variant: keyof COPY }} options
  */
 export function renderProjectFormStub(container, options) {
-  const { projectId, variant, collectionId } = options;
+  const { projectId, variant } = options;
   const copy = COPY[variant] ?? {
     title: 'Раздел в разработке',
     lead: 'Форма появится в следующей версии.',
@@ -63,16 +59,13 @@ export function renderProjectFormStub(container, options) {
   const main = el('main', { className: 'page register-page project-stub-page' });
   const card = el('div', { className: 'register-card project-stub-card' });
 
-  const collectionIdTrim = typeof collectionId === 'string' ? collectionId.trim() : '';
-  const backToCollection = variant === 'media-new' && collectionIdTrim && /^\d+$/.test(collectionIdTrim);
-
   const backBtn = el(
     'button',
     {
       type: 'button',
       className: 'button button-ghost button-icon',
-      'aria-label': backToCollection ? 'Назад к коллекции' : 'Назад к проекту',
-      title: backToCollection ? 'Назад к коллекции' : 'Назад к проекту',
+      'aria-label': 'Назад к проекту',
+      title: 'Назад к проекту',
     },
     el('img', {
       className: 'header-toolbar__icon',
@@ -84,11 +77,7 @@ export function renderProjectFormStub(container, options) {
     }),
   );
   backBtn.addEventListener('click', () => {
-    if (backToCollection) {
-      location.hash = `#/project/${projectId}/collections/${collectionIdTrim}`;
-    } else {
-      location.hash = `#/project/${projectId}`;
-    }
+    location.hash = `#/project/${projectId}`;
   });
 
   const header = el('div', { className: 'register-card__header' },
@@ -107,28 +96,9 @@ export function renderProjectFormStub(container, options) {
     }),
   );
 
-  const extra = variant === 'media-new' && collectionIdTrim
-    ? el('p', {
-      className: 'register-muted',
-      textContent: `Коллекция: #${collectionIdTrim}`,
-    })
-    : null;
-
-  const secondaryLink = backToCollection
-    ? el(
-      'a',
-      {
-        className: 'button button-ghost',
-        href: `#/project/${projectId}/collections/${collectionIdTrim}`,
-        textContent: 'К коллекции',
-      },
-    )
-    : null;
-
   card.append(
     header,
     figure,
-    extra,
     el('p', { className: 'register-muted project-stub-card__lead', textContent: copy.lead }),
     el(
       'a',
@@ -139,9 +109,6 @@ export function renderProjectFormStub(container, options) {
       },
     ),
   );
-  if (secondaryLink) {
-    card.insertBefore(secondaryLink, card.lastElementChild);
-  }
   main.append(card);
   container.append(main);
 }

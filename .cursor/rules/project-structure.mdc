@@ -9,7 +9,8 @@ alwaysApply: true
 
 ## Серверная часть (`server/`)
 
-- `src/server.js` — точка входа (Express, статика `client/`, монтирование `/api`).
+- `src/server.js` — точка входа (Express, статика `client/`, раздача загрузок **`/storage`** из каталога **`storage/`** в корне репозитория, монтирование `/api`).
+- `src/paths.js` — абсолютный путь к каталогу **`storage/`** для сохранения медиа.
 - `src/db.js` — пул PostgreSQL (`pg`).
 - `src/jwtSecret.js` — секрет и срок жизни JWT (`JWT_SECRET`, `JWT_EXPIRES_IN`).
 - `src/middleware/auth.js` — `Bearer`-токен, `requireAuth`.
@@ -18,7 +19,7 @@ alwaysApply: true
 - `src/routes/projects.js` — список проектов, карточка (`GET /:id`), опции формы (`GET …/create-options`), создание (`POST`) и обновление (`PATCH /:id`, в т.ч. `user_project`).
 - `src/routes/tasks.js` — список ТЗ (`GET /tasks`), карточка (`GET /tasks/:id`), опции формы, создание и обновление (`GET …/create-options`, `POST /tasks`, `PATCH /tasks/:id`).
 - `src/routes/collections.js` — список коллекций с фильтрами (`GET /collections`), карточка с медиа (`GET /collections/:id`), создание (`POST /collections`) и обновление (`PATCH /collections/:id`).
-- `src/routes/media.js` — список медиа с фильтрами (`GET /media`).
+- `src/routes/media.js` — список медиа с фильтрами (`GET /media`), загрузка файла (`POST /media`).
 - `db_init/init.js` — создание БД и схемы, seed справочников.
 - `package.json` — зависимости и скрипты серверной части.
 
@@ -28,10 +29,10 @@ alwaysApply: true
 - `styles/` — общие стили (например `main.css`).
 - `js/app.js` — bootstrap и hash-роутер.
 - `js/nav/` — при необходимости общая навигация (например `dashboardTabs.js` для вкладок разделов).
-- `js/pages/` — экраны: `home`, `tasksList`, `taskNew`, `taskDetail`, `taskEdit`, `collectionsList`, `collectionNew`, `collectionDetail`, `collectionEdit`, `mediaList`, `login`, `register`, `admin`, `projectNew`, `projectDetail` и др.
-- `js/api/` — обёртки `fetch` к `/api` (`auth.js`, `projects.js`, `tasks.js`, `collections.js` — `fetchCollections`, `fetchCollectionById`, `createCollection`, `updateCollection`, `media.js` — `fetchMedia`).
+- `js/pages/` — экраны: `home`, `tasksList`, `taskNew`, `taskDetail`, `taskEdit`, `collectionsList`, `collectionNew`, `collectionDetail`, `collectionEdit`, `mediaNew`, `mediaList`, `login`, `register`, `admin`, `projectNew`, `projectDetail` и др.
+- `js/api/` — обёртки `fetch` к `/api` (`auth.js`, `projects.js`, `tasks.js`, `collections.js` — `fetchCollections`, `fetchCollectionById`, `createCollection`, `updateCollection`, `media.js` — `fetchMedia`, `uploadMedia`).
 - `js/auth/session.js` — токен и снимок пользователя в `sessionStorage`.
-- `icons/` — SVG-иконки (при необходимости).
+- `icons/` — SVG-иконки; для экрана **`mediaNew`** — типы не‑изображений: **`video-24.svg`**, **`music-24.svg`**, **`table-24.svg`**, **`docs-24.svg`**.
 
 ## Настройки Cursor (`.cursor/`)
 

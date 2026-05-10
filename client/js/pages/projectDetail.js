@@ -458,7 +458,7 @@ export async function renderProjectDetailPage(container, projectId) {
   );
 
   const mediaGrid = el('div', { className: 'projects-grid projects-grid--detail' });
-  if (roleName !== 'Клиент') {
+  if (canManageTasks) {
     mediaGrid.append(buildSectionCreateCard(hrefMedia, 'Добавить медиа'));
   }
   if (media.length === 0) {

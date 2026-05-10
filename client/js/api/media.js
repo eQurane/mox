@@ -37,3 +37,29 @@ export async function fetchMedia(filters = {}) {
   }
   return data;
 }
+
+/**
+ * @param {{ file: File, collectionId: number, description?: string }} payload
+ */
+export async function uploadMedia(payload) {
+  const token = getToken();
+  if (!token) {
+    throw new Error('Сессия отсутствует.');
+  }
+
+  const body = new FormData();
+  body.append('file', payload.file);
+  body.append('collectionId', String(payload.collectionId));
+  body.append('description', payload.description ?? '');
+
+  const res = await fetch(`${apiBase}/media`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body,
+  });
+  const data = await parseJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(data.error || 'Не удалось загрузить файл.');
+  }
+  return data;
+}

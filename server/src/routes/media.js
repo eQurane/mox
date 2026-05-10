@@ -1,6 +1,11 @@
+import crypto from 'crypto';
 import express from 'express';
+import fs from 'fs/promises';
+import multer from 'multer';
+import path from 'path';
 import pool from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { storageDir } from '../paths.js';
 
 const router = express.Router();
 
@@ -20,6 +25,67 @@ async function fetchRoleNameByUserId(db, userId) {
 
 function escapeIlikePattern(value) {
   return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
+
+function safeExtension(originalName) {
+  const base = path.basename(originalName || '');
+  const dot = base.lastIndexOf('.');
+  if (dot <= 0 || dot >= base.length - 1) return '';
+  return base
+    .slice(dot + 1)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .slice(0, 10);
+}
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, storageDir),
+    filename: (_req, file, cb) => {
+      const ext = safeExtension(file.originalname);
+      cb(null, `${crypto.randomUUID()}${ext ? `.${ext}` : ''}`);
+    },
+  }),
+});
+
+/**
+ * @param {import('express').Response} res
+ * @returns {Promise<string | null>}
+ */
+async function requireManagerOrAdmin(res, userId) {
+  const roleName = await fetchRoleNameByUserId(pool, userId);
+  if (!roleName) {
+    res.status(401).json({ error: 'Пользователь не найден.' });
+    return null;
+  }
+  if (!ROLES_ALL_PROJECTS.has(roleName)) {
+    res.status(403).json({ error: 'Недостаточно прав.' });
+    return null;
+  }
+  return roleName;
+}
+
+/** Проект доступен редактору (как при POST коллекции). */
+async function fetchProjectDatesIfVisible(projectId, userId, roleName) {
+  const seeAll = ROLES_ALL_PROJECTS.has(roleName);
+  const r = await pool.query(
+    `SELECT p.start_date::text AS start_date, p.end_date::text AS end_date
+       FROM projects p
+      WHERE p.id = $1
+        AND (
+          $2::boolean IS TRUE
+          OR EXISTS (
+            SELECT 1 FROM user_project up
+            WHERE up.project_id = p.id
+              AND up.user_id = $3
+              AND up.excluded_at IS NULL
+          )
+        )`,
+    [projectId, seeAll, userId],
+  );
+  const row = r.rows[0];
+  if (!row) return null;
+  return { startDate: row.start_date, endDate: row.end_date };
 }
 
 router.get('/media', requireAuth, async (req, res) => {
@@ -216,6 +282,147 @@ router.get('/media', requireAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Не удалось загрузить медиа.' });
+  }
+});
+
+router.post('/media', requireAuth, (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      console.error(err);
+      return res.status(400).json({ error: 'Не удалось загрузить файл.' });
+    }
+    next();
+  });
+}, async (req, res) => {
+  const savedPath = req.file?.path;
+
+  async function removeSavedFile() {
+    if (savedPath) await fs.unlink(savedPath).catch(() => {});
+  }
+
+  try {
+    const roleName = await requireManagerOrAdmin(res, req.userId);
+    if (!roleName) {
+      await removeSavedFile();
+      return;
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'Выберите файл для загрузки.' });
+    }
+
+    const collectionId = Number(req.body?.collectionId);
+    const description =
+      typeof req.body?.description === 'string' ? req.body.description : '';
+
+    if (!Number.isInteger(collectionId) || collectionId < 1) {
+      await removeSavedFile();
+      return res.status(400).json({ error: 'Укажите корректную коллекцию.' });
+    }
+
+    const colRes = await pool.query(
+      `SELECT c.id, t.project_id
+         FROM collections c
+         JOIN tasks t ON t.id = c.task_id
+        WHERE c.id = $1`,
+      [collectionId],
+    );
+    const colRow = colRes.rows[0];
+    if (!colRow) {
+      await removeSavedFile();
+      return res.status(404).json({ error: 'Коллекция не найдена.' });
+    }
+
+    const projectVisible = await fetchProjectDatesIfVisible(
+      colRow.project_id,
+      req.userId,
+      roleName,
+    );
+    if (!projectVisible) {
+      await removeSavedFile();
+      return res.status(404).json({ error: 'Коллекция не найдена.' });
+    }
+
+    const statusRes = await pool.query(`SELECT id FROM statuses_media WHERE name = $1 LIMIT 1`, [
+      'Активный',
+    ]);
+    const statusId = statusRes.rows[0]?.id;
+    if (statusId == null) {
+      await removeSavedFile();
+      return res.status(500).json({ error: 'Не удалось создать медиа.' });
+    }
+
+    const ext = safeExtension(req.file.originalname);
+    const formatStr = ext || 'file';
+    const displayName = path.basename(req.file.originalname || '').trim() || 'file';
+    const publicPath = `/storage/${req.file.filename}`;
+
+    let insertedId;
+    try {
+      const ins = await pool.query(
+        `INSERT INTO media (path, name, format, description, upload_at, status_id, collection_id)
+         VALUES ($1, $2, $3, $4, NOW(), $5, $6)
+         RETURNING id`,
+        [publicPath, displayName, formatStr, description, statusId, collectionId],
+      );
+      insertedId = ins.rows[0].id;
+    } catch (insertErr) {
+      console.error(insertErr);
+      await removeSavedFile();
+      return res.status(500).json({ error: 'Не удалось сохранить медиа.' });
+    }
+
+    const detail = await pool.query(
+      `SELECT m.id,
+              m.collection_id,
+              m.path,
+              m.name,
+              m.format,
+              m.description,
+              m.upload_at,
+              m.status_id,
+              sm.name AS status_name,
+              c.name AS collection_name,
+              c.task_id,
+              t.name AS task_name,
+              t.project_id,
+              p.name AS project_name
+         FROM media m
+         JOIN collections c ON c.id = m.collection_id
+         JOIN tasks t ON t.id = c.task_id
+         JOIN projects p ON p.id = t.project_id
+         JOIN statuses_media sm ON sm.id = m.status_id
+        WHERE m.id = $1`,
+      [insertedId],
+    );
+
+    const row = detail.rows[0];
+    if (!row) {
+      return res.status(500).json({ error: 'Не удалось сохранить медиа.' });
+    }
+
+    res.status(201).json({
+      media: {
+        id: row.id,
+        collectionId: row.collection_id,
+        path: row.path,
+        name: row.name,
+        format: row.format,
+        description: row.description ?? '',
+        uploadAt: row.upload_at,
+        statusId: row.status_id,
+        statusName: row.status_name,
+        collectionName: row.collection_name,
+        taskId: row.task_id,
+        taskName: row.task_name,
+        projectId: row.project_id,
+        projectName: row.project_name,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    await removeSavedFile();
+    res.status(500).json({ error: 'Не удалось сохранить медиа.' });
   }
 });
 

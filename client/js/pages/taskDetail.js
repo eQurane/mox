@@ -152,6 +152,7 @@ export async function renderTaskDetailPage(container, projectId, taskId) {
 
   const user = getUserSnapshot() || {};
   const roleName = user.roleName;
+  const canManageTasks = roleName === 'Админ' || roleName === 'Менеджер';
   const pidNum = Number(projectId);
   const taskPid = task.projectId;
 
@@ -391,7 +392,7 @@ export async function renderTaskDetailPage(container, projectId, taskId) {
   );
 
   const mediaGrid = el('div', { className: 'projects-grid projects-grid--detail' });
-  if (roleName !== 'Клиент') {
+  if (canManageTasks) {
     mediaGrid.append(buildSectionCreateCard(hrefMediaNew, 'Добавить медиа'));
   }
   if (mediaList.length === 0) {
