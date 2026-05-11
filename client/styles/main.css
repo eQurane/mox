@@ -1092,6 +1092,24 @@ a.button {
   background: #f1f5f9;
 }
 
+.project-card__media--kind-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e8eef8, #dbe4f4);
+}
+
+.project-card__kind-icon {
+  display: block;
+  width: 56px;
+  height: 56px;
+  opacity: 0.88;
+}
+
+.project-detail__media-card .project-card__kind-icon {
+  flex-shrink: 0;
+}
+
 .media-badge {
   display: inline-block;
   font-size: 0.75rem;

@@ -3,6 +3,7 @@ import { fetchTasks } from '../api/tasks.js';
 import { fetchMe } from '../api/auth.js';
 import { appendDashboardSectionTabs } from '../nav/dashboardTabs.js';
 import { clearSession, getToken, setSession } from '../auth/session.js';
+import { attachCoverThumb } from '../utils/mediaCardThumb.js';
 
 const ICON_ACCOUNT = '/icons/account-24.svg';
 const ICON_SEARCH = '/icons/search-24.svg';
@@ -145,7 +146,8 @@ function buildTaskListCard(task) {
       ? `#/project/${encodeURIComponent(String(task.projectId))}/tasks/${encodeURIComponent(String(task.id))}`
       : null;
 
-  const mediaTop = el('div', { className: 'project-card__media project-card__media--placeholder' });
+  const mediaTop = el('div', { className: 'project-card__media' });
+  attachCoverThumb(mediaTop, task.coverPath ?? null);
   const body = el(
     'div',
     { className: 'project-card__body' },

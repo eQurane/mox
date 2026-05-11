@@ -353,7 +353,15 @@ router.get('/tasks', requireAuth, async (req, res) => {
              t.deadline,
              r.name AS role_name,
              t.status_id,
-             st.name AS status_name
+             st.name AS status_name,
+             (
+               SELECT m.path
+                 FROM media m
+                 JOIN collections c ON c.id = m.collection_id
+                WHERE c.task_id = t.id
+                ORDER BY m.upload_at DESC
+                LIMIT 1
+             ) AS cover_path
         FROM tasks t
         JOIN projects p ON p.id = t.project_id
         JOIN roles r ON r.id = t.role_id
@@ -377,6 +385,7 @@ router.get('/tasks', requireAuth, async (req, res) => {
       roleName: row.role_name,
       statusId: row.status_id,
       statusName: row.status_name,
+      coverPath: row.cover_path ?? null,
     }));
 
     const statuses = statusesResult.rows.map((row) => ({
@@ -461,7 +470,14 @@ router.get('/tasks/:id', requireAuth, async (req, res) => {
               c.name,
               c.description,
               c.created_at,
-              c.last_edited_at
+              c.last_edited_at,
+              (
+                SELECT m.path
+                  FROM media m
+                 WHERE m.collection_id = c.id
+                 ORDER BY m.upload_at DESC
+                 LIMIT 1
+              ) AS cover_path
          FROM collections c
         WHERE c.task_id = $1
         ORDER BY c.id ASC`,
@@ -475,6 +491,7 @@ router.get('/tasks/:id', requireAuth, async (req, res) => {
       description: row.description ?? '',
       createdAt: row.created_at,
       lastEditedAt: row.last_edited_at,
+      coverPath: row.cover_path ?? null,
     }));
 
     const mediaResult = await pool.query(

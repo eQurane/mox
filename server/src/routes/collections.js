@@ -245,7 +245,14 @@ router.get('/collections', requireAuth, async (req, res) => {
              c.last_edited_at,
              t.project_id,
              p.name AS project_name,
-             t.name AS task_name
+             t.name AS task_name,
+             (
+               SELECT m.path
+                 FROM media m
+                WHERE m.collection_id = c.id
+                ORDER BY m.upload_at DESC
+                LIMIT 1
+             ) AS cover_path
         FROM collections c
         JOIN tasks t ON t.id = c.task_id
         JOIN projects p ON p.id = t.project_id
@@ -269,6 +276,7 @@ router.get('/collections', requireAuth, async (req, res) => {
       projectId: row.project_id,
       projectName: row.project_name,
       taskName: row.task_name,
+      coverPath: row.cover_path ?? null,
     }));
 
     const taskStatuses = taskStatusesResult.rows.map((row) => ({

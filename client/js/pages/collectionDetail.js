@@ -1,6 +1,7 @@
 import { fetchCollectionById } from '../api/collections.js';
 import { getUserSnapshot } from '../auth/session.js';
 import { el } from './projectFormShared.js';
+import { attachMediaCardThumb } from '../utils/mediaCardThumb.js';
 
 const ICON_BACK = '/icons/back-24.svg';
 const ICON_EDIT = '/icons/edit-24.svg';
@@ -20,15 +21,6 @@ function formatDateTimeRu(value) {
 
 function mediaStatusSlug(name) {
   return MEDIA_STATUS_SLUG[name] || 'unknown';
-}
-
-function isProbablyImage(format, path) {
-  const ext = String(format || '')
-    .replace(/^\./, '')
-    .toLowerCase();
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return true;
-  const p = String(path || '').toLowerCase();
-  return /\.(jpe?g|png|gif|webp|svg)(\?|$)/i.test(p);
 }
 
 function buildSectionCreateCard(href, label) {
@@ -218,22 +210,8 @@ export async function renderCollectionDetailPage(container, projectId, collectio
       className: `project-card project-card--static project-detail__media-card project-card--status-unknown`,
     });
 
-    const mediaTop = el('div', { className: 'project-card__media project-card__media--placeholder' });
-    if (isProbablyImage(item.format, item.path)) {
-      const img = el('img', {
-        className: 'project-card__img',
-        alt: '',
-        src: item.path,
-        loading: 'lazy',
-      });
-      img.addEventListener('load', () => {
-        mediaTop.classList.remove('project-card__media--placeholder');
-      });
-      img.addEventListener('error', () => {
-        img.remove();
-      });
-      mediaTop.append(img);
-    }
+    const mediaTop = el('div');
+    attachMediaCardThumb(mediaTop, item);
 
     const body = el(
       'div',

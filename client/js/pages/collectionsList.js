@@ -4,6 +4,7 @@ import { fetchCollections } from '../api/collections.js';
 import { fetchMe } from '../api/auth.js';
 import { appendDashboardSectionTabs } from '../nav/dashboardTabs.js';
 import { clearSession, getToken, setSession } from '../auth/session.js';
+import { attachCoverThumb } from '../utils/mediaCardThumb.js';
 
 const ICON_ACCOUNT = '/icons/account-24.svg';
 const ICON_SEARCH = '/icons/search-24.svg';
@@ -136,7 +137,9 @@ function buildCollectionCard(col) {
       textContent: `Создано: ${formatDateTimeRu(col.createdAt)} · Изменено: ${formatDateTimeRu(col.lastEditedAt)}`,
     }),
   );
-  card.append(el('div', { className: 'project-card__media project-card__media--placeholder' }), body);
+  const mediaTop = el('div', { className: 'project-card__media' });
+  attachCoverThumb(mediaTop, col.coverPath ?? null);
+  card.append(mediaTop, body);
   return card;
 }
 

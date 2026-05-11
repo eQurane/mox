@@ -5,6 +5,7 @@ import { fetchMedia } from '../api/media.js';
 import { fetchMe } from '../api/auth.js';
 import { appendDashboardSectionTabs } from '../nav/dashboardTabs.js';
 import { clearSession, getToken, setSession } from '../auth/session.js';
+import { attachMediaCardThumb } from '../utils/mediaCardThumb.js';
 
 const ICON_ACCOUNT = '/icons/account-24.svg';
 const ICON_SEARCH = '/icons/search-24.svg';
@@ -32,15 +33,6 @@ const MEDIA_STATUS_SLUG = {
 
 function mediaStatusSlug(name) {
   return MEDIA_STATUS_SLUG[name] || 'unknown';
-}
-
-function isProbablyImage(format, path) {
-  const ext = String(format || '')
-    .replace(/^\./, '')
-    .toLowerCase();
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return true;
-  const p = String(path || '').toLowerCase();
-  return /\.(jpe?g|png|gif|webp|svg)(\?|$)/i.test(p);
 }
 
 function el(tag, attrs = {}, ...children) {
@@ -131,22 +123,8 @@ function buildMediaCard(item) {
     className: `project-card project-card--static project-detail__media-card project-card--status-unknown`,
   });
 
-  const mediaTop = el('div', { className: 'project-card__media project-card__media--placeholder' });
-  if (isProbablyImage(item.format, item.path)) {
-    const img = el('img', {
-      className: 'project-card__img',
-      alt: '',
-      src: item.path,
-      loading: 'lazy',
-    });
-    img.addEventListener('load', () => {
-      mediaTop.classList.remove('project-card__media--placeholder');
-    });
-    img.addEventListener('error', () => {
-      img.remove();
-    });
-    mediaTop.append(img);
-  }
+  const mediaTop = el('div');
+  attachMediaCardThumb(mediaTop, item);
 
   const projectLink =
     item.projectId != null

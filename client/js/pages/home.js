@@ -2,6 +2,7 @@ import { fetchProjects } from '../api/projects.js';
 import { fetchMe } from '../api/auth.js';
 import { clearSession, getToken, setSession } from '../auth/session.js';
 import { appendDashboardSectionTabs } from '../nav/dashboardTabs.js';
+import { attachCoverThumb } from '../utils/mediaCardThumb.js';
 const ICON_ACCOUNT = '/icons/account-24.svg';
 const ICON_SEARCH = '/icons/search-24.svg';
 const ICON_UPDATE = '/icons/update-24.svg';
@@ -88,23 +89,8 @@ function buildProjectCard(project) {
     href: `#/project/${project.id}`,
   });
 
-  const media = el('div', { className: 'project-card__media project-card__media--placeholder' });
-  if (project.coverPath) {
-    const img = el('img', {
-      className: 'project-card__img',
-      alt: '',
-      src: project.coverPath,
-      loading: 'lazy',
-    });
-    img.addEventListener('load', () => {
-      media.classList.remove('project-card__media--placeholder');
-    });
-    img.addEventListener('error', () => {
-      img.remove();
-      media.classList.add('project-card__media--placeholder');
-    });
-    media.append(img);
-  }
+  const media = el('div', { className: 'project-card__media' });
+  attachCoverThumb(media, project.coverPath ?? null);
 
   const badge = el('span', { className: `project-card__badge project-card__badge--${slug}`, textContent: project.statusName });
 

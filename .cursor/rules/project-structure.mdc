@@ -31,6 +31,7 @@ alwaysApply: true
 - `js/nav/` — при необходимости общая навигация (например `dashboardTabs.js` для вкладок разделов).
 - `js/pages/` — экраны: `home`, `tasksList`, `taskNew`, `taskDetail`, `taskEdit`, `collectionsList`, `collectionNew`, `collectionDetail`, `collectionEdit`, `mediaNew`, `mediaList`, `login`, `register`, `admin`, `projectNew`, `projectDetail` и др.
 - `js/api/` — обёртки `fetch` к `/api` (`auth.js`, `projects.js`, `tasks.js`, `collections.js` — `fetchCollections`, `fetchCollectionById`, `createCollection`, `updateCollection`, `media.js` — `fetchMedia`, `uploadMedia`).
+- `js/utils/` — переиспользуемые клиентские хелперы без экрана; например `mediaCardThumb.js` — превью карточек медиа на **`#/media`** и в сетках на страницах проекта / ТЗ / коллекции (`attachMediaCardThumb`, иконки типов из `icons/`).
 - `js/auth/session.js` — токен и снимок пользователя в `sessionStorage`.
 - `icons/` — SVG-иконки; для экрана **`mediaNew`** — типы не‑изображений: **`video-24.svg`**, **`music-24.svg`**, **`table-24.svg`**, **`docs-24.svg`**.
 
