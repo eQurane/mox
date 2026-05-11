@@ -120,7 +120,7 @@ function syncHash(filters) {
 function buildMediaCard(item) {
   const mslug = mediaStatusSlug(item.statusName);
   const card = el('article', {
-    className: `project-card project-card--static project-detail__media-card project-card--status-unknown`,
+    className: `project-card project-card--static project-card--link project-detail__media-card project-card--status-unknown`,
   });
 
   const mediaTop = el('div');
@@ -138,10 +138,16 @@ function buildMediaCard(item) {
           textContent: `Проект: ${item.projectName ?? '—'}`,
         });
 
+  const titleLink = el('a', {
+    className: 'project-card__detail-title-link',
+    href: `#/media/${encodeURIComponent(String(item.id))}`,
+    textContent: item.name ?? '',
+  });
+
   const body = el(
     'div',
     { className: 'project-card__body' },
-    el('h2', { className: 'project-card__title', textContent: item.name ?? '' }),
+    el('h2', { className: 'project-card__title' }, titleLink),
     el('p', {
       className: 'project-card__goal',
       textContent: item.description || '—',

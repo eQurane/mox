@@ -10,6 +10,8 @@ import projectsRouter from './routes/projects.js';
 import tasksRouter from './routes/tasks.js';
 import collectionsRouter from './routes/collections.js';
 import mediaRouter from './routes/media.js';
+import commentsRouter from './routes/comments.js';
+import notificationsRouter from './routes/notifications.js';
 import { storageDir } from './paths.js';
 
 dotenv.config();
@@ -34,6 +36,8 @@ app.use('/api', projectsRouter);
 app.use('/api', tasksRouter);
 app.use('/api', collectionsRouter);
 app.use('/api', mediaRouter);
+app.use('/api', commentsRouter);
+app.use('/api', notificationsRouter);
 app.use(express.static(clientDir));
 
 app.listen(PORT, () => {

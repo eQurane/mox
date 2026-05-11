@@ -19,7 +19,9 @@ alwaysApply: true
 - `src/routes/projects.js` — список проектов, карточка (`GET /:id`), опции формы (`GET …/create-options`), создание (`POST`) и обновление (`PATCH /:id`, в т.ч. `user_project`).
 - `src/routes/tasks.js` — список ТЗ (`GET /tasks`), карточка (`GET /tasks/:id`), опции формы, создание и обновление (`GET …/create-options`, `POST /tasks`, `PATCH /tasks/:id`).
 - `src/routes/collections.js` — список коллекций с фильтрами (`GET /collections`), карточка с медиа (`GET /collections/:id`), создание (`POST /collections`) и обновление (`PATCH /collections/:id`).
-- `src/routes/media.js` — список медиа с фильтрами (`GET /media`), загрузка файла (`POST /media`).
+- `src/routes/media.js` — список медиа с фильтрами (`GET /media`), загрузка файла (`POST /media`), карточка (`GET /media/:id`), обновление описания (`PATCH /media/:id`), soft-delete (`DELETE /media/:id`), замена файла (`POST /media/:id/replace`).
+- `src/routes/comments.js` — список комментариев к медиа (`GET /media/:mediaId/comments`) и добавление (`POST /media/:mediaId/comments`).
+- `src/routes/notifications.js` — уведомления для Менеджера/Админа на основе последних комментариев по проектам (`GET /notifications`).
 - `db_init/init.js` — создание БД и схемы, seed справочников.
 - `package.json` — зависимости и скрипты серверной части.
 
@@ -30,10 +32,11 @@ alwaysApply: true
 - `js/app.js` — bootstrap и hash-роутер.
 - `js/nav/` — при необходимости общая навигация (например `dashboardTabs.js` для вкладок разделов).
 - `js/pages/` — экраны: `home`, `tasksList`, `taskNew`, `taskDetail`, `taskEdit`, `collectionsList`, `collectionNew`, `collectionDetail`, `collectionEdit`, `mediaNew`, `mediaList`, `login`, `register`, `admin`, `projectNew`, `projectDetail` и др.
-- `js/api/` — обёртки `fetch` к `/api` (`auth.js`, `projects.js`, `tasks.js`, `collections.js` — `fetchCollections`, `fetchCollectionById`, `createCollection`, `updateCollection`, `media.js` — `fetchMedia`, `uploadMedia`).
-- `js/utils/` — переиспользуемые клиентские хелперы без экрана; например `mediaCardThumb.js` — превью карточек медиа на **`#/media`** и в сетках на страницах проекта / ТЗ / коллекции (`attachMediaCardThumb`, иконки типов из `icons/`).
+- `js/pages/` — экраны: `home`, `tasksList`, `taskNew`, `taskDetail`, `taskEdit`, `collectionsList`, `collectionNew`, `collectionDetail`, `collectionEdit`, `mediaNew`, `mediaList`, **`mediaDetail`**, `login`, `register`, `admin`, `projectNew`, `projectDetail` и др.
+- `js/api/` — обёртки `fetch` к `/api` (`auth.js`, `projects.js`, `tasks.js`, `collections.js`, `media.js` — `fetchMedia`, `fetchMediaById`, `updateMedia`, `deleteMedia`, `replaceMedia`, `uploadMedia`; **`comments.js`** — `fetchComments`, `addComment`; **`notifications.js`** — `fetchNotifications`).
+- `js/utils/` — переиспользуемые клиентские хелперы без экрана; `mediaCardThumb.js` — превью карточек медиа; **`notificationBell.js`** — колокольчик уведомлений (только Менеджер/Админ, опрос `GET /api/notifications` раз в 30 сек, «прочитано» в `localStorage`).
 - `js/auth/session.js` — токен и снимок пользователя в `sessionStorage`.
-- `icons/` — SVG-иконки; для экрана **`mediaNew`** — типы не‑изображений: **`video-24.svg`**, **`music-24.svg`**, **`table-24.svg`**, **`docs-24.svg`**.
+- `icons/` — SVG-иконки; типы не‑изображений: **`video-24.svg`**, **`music-24.svg`**, **`table-24.svg`**, **`docs-24.svg`**; **`notifications-24.svg`** — колокольчик уведомлений; **`no-image-24.svg`** — заглушка обложки.
 
 ## Настройки Cursor (`.cursor/`)
 

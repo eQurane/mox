@@ -10,6 +10,7 @@ import { storageDir } from '../paths.js';
 const router = express.Router();
 
 const ROLES_ALL_PROJECTS = new Set(['Админ', 'Менеджер']);
+const ROLES_CAN_MODIFY = new Set(['Админ', 'Менеджер', 'Исполнитель']);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 async function fetchRoleNameByUserId(db, userId) {
@@ -63,6 +64,54 @@ async function requireManagerOrAdmin(res, userId) {
     return null;
   }
   return roleName;
+}
+
+/** Возвращает строку медиа с контекстом (проект / задача / коллекция) или null при отсутствии доступа. */
+async function fetchMediaRowById(id, userId, roleName) {
+  const seeAll = ROLES_ALL_PROJECTS.has(roleName);
+  const r = await pool.query(
+    `SELECT m.id, m.collection_id, m.path, m.name, m.format, m.description,
+            m.upload_at, m.status_id,
+            sm.name AS status_name, c.name AS collection_name, c.task_id,
+            t.name AS task_name, t.project_id, p.name AS project_name
+       FROM media m
+       JOIN collections c ON c.id = m.collection_id
+       JOIN tasks t ON t.id = c.task_id
+       JOIN projects p ON p.id = t.project_id
+       JOIN statuses_media sm ON sm.id = m.status_id
+      WHERE m.id = $1
+        AND (${
+          seeAll
+            ? 'TRUE'
+            : `EXISTS (
+            SELECT 1 FROM user_project up
+            WHERE up.project_id = t.project_id
+              AND up.user_id = $2
+              AND up.excluded_at IS NULL
+          )`
+        })`,
+    seeAll ? [id] : [id, userId],
+  );
+  return r.rows[0] ?? null;
+}
+
+function mapMediaRow(row) {
+  return {
+    id: row.id,
+    collectionId: row.collection_id,
+    path: row.path,
+    name: row.name,
+    format: row.format,
+    description: row.description ?? '',
+    uploadAt: row.upload_at,
+    statusId: row.status_id,
+    statusName: row.status_name,
+    collectionName: row.collection_name,
+    taskId: row.task_id,
+    taskName: row.task_name,
+    projectId: row.project_id,
+    projectName: row.project_name,
+  };
 }
 
 /** Проект доступен редактору (как при POST коллекции). */
@@ -423,6 +472,179 @@ router.post('/media', requireAuth, (req, res, next) => {
     console.error(err);
     await removeSavedFile();
     res.status(500).json({ error: 'Не удалось сохранить медиа.' });
+  }
+});
+
+// GET /api/media/:id
+router.get('/media/:id', requireAuth, async (req, res) => {
+  try {
+    const roleName = await fetchRoleNameByUserId(pool, req.userId);
+    if (!roleName) return res.status(401).json({ error: 'Пользователь не найден.' });
+    if (roleName === 'Клиент' || roleName === 'Внешний подрядчик') {
+      return res.status(403).json({ error: 'Недостаточно прав.' });
+    }
+
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id < 1) {
+      return res.status(400).json({ error: 'Некорректный идентификатор медиа.' });
+    }
+
+    const row = await fetchMediaRowById(id, req.userId, roleName);
+    if (!row) return res.status(404).json({ error: 'Медиа не найдено.' });
+
+    res.json({ media: mapMediaRow(row) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Не удалось загрузить медиа.' });
+  }
+});
+
+// PATCH /api/media/:id — обновить описание (Менеджер, Админ, Исполнитель)
+router.patch('/media/:id', requireAuth, async (req, res) => {
+  try {
+    const roleName = await fetchRoleNameByUserId(pool, req.userId);
+    if (!roleName) return res.status(401).json({ error: 'Пользователь не найден.' });
+    if (!ROLES_CAN_MODIFY.has(roleName)) {
+      return res.status(403).json({ error: 'Недостаточно прав.' });
+    }
+
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id < 1) {
+      return res.status(400).json({ error: 'Некорректный идентификатор медиа.' });
+    }
+
+    const row = await fetchMediaRowById(id, req.userId, roleName);
+    if (!row) return res.status(404).json({ error: 'Медиа не найдено.' });
+
+    const description =
+      typeof req.body?.description === 'string' ? req.body.description : row.description ?? '';
+
+    await pool.query(`UPDATE media SET description = $1 WHERE id = $2`, [description, id]);
+
+    const updated = await fetchMediaRowById(id, req.userId, roleName);
+    res.json({ media: mapMediaRow(updated) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Не удалось обновить медиа.' });
+  }
+});
+
+// DELETE /api/media/:id — soft-delete (Менеджер, Админ, Исполнитель)
+router.delete('/media/:id', requireAuth, async (req, res) => {
+  try {
+    const roleName = await fetchRoleNameByUserId(pool, req.userId);
+    if (!roleName) return res.status(401).json({ error: 'Пользователь не найден.' });
+    if (!ROLES_CAN_MODIFY.has(roleName)) {
+      return res.status(403).json({ error: 'Недостаточно прав.' });
+    }
+
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id < 1) {
+      return res.status(400).json({ error: 'Некорректный идентификатор медиа.' });
+    }
+
+    const row = await fetchMediaRowById(id, req.userId, roleName);
+    if (!row) return res.status(404).json({ error: 'Медиа не найдено.' });
+
+    await pool.query(
+      `UPDATE media
+          SET status_id = (SELECT id FROM statuses_media WHERE name = 'Удалённый' LIMIT 1)
+        WHERE id = $1`,
+      [id],
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Не удалось удалить медиа.' });
+  }
+});
+
+// POST /api/media/:id/replace — заменить файл (Менеджер, Админ)
+router.post('/media/:id/replace', requireAuth, (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      console.error(err);
+      return res.status(400).json({ error: 'Не удалось загрузить файл.' });
+    }
+    next();
+  });
+}, async (req, res) => {
+  const savedPath = req.file?.path;
+
+  async function removeSavedFile() {
+    if (savedPath) await fs.unlink(savedPath).catch(() => {});
+  }
+
+  try {
+    const roleName = await requireManagerOrAdmin(res, req.userId);
+    if (!roleName) {
+      await removeSavedFile();
+      return;
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'Выберите файл для загрузки.' });
+    }
+
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id < 1) {
+      await removeSavedFile();
+      return res.status(400).json({ error: 'Некорректный идентификатор медиа.' });
+    }
+
+    const oldRow = await fetchMediaRowById(id, req.userId, roleName);
+    if (!oldRow) {
+      await removeSavedFile();
+      return res.status(404).json({ error: 'Медиа не найдено.' });
+    }
+
+    const [activeRes, archivedRes] = await Promise.all([
+      pool.query(`SELECT id FROM statuses_media WHERE name = 'Активный' LIMIT 1`),
+      pool.query(`SELECT id FROM statuses_media WHERE name = 'Архивный' LIMIT 1`),
+    ]);
+    const activeStatusId = activeRes.rows[0]?.id;
+    const archivedStatusId = archivedRes.rows[0]?.id;
+    if (!activeStatusId || !archivedStatusId) {
+      await removeSavedFile();
+      return res.status(500).json({ error: 'Не удалось заменить медиа.' });
+    }
+
+    const ext = safeExtension(req.file.originalname);
+    const formatStr = ext || 'file';
+    const displayName = path.basename(req.file.originalname || '').trim() || 'file';
+    const publicPath = `/storage/${req.file.filename}`;
+
+    const client = await pool.connect();
+    let newId;
+    try {
+      await client.query('BEGIN');
+      const ins = await client.query(
+        `INSERT INTO media (path, name, format, description, upload_at, status_id, collection_id)
+         VALUES ($1, $2, $3, $4, NOW(), $5, $6)
+         RETURNING id`,
+        [publicPath, displayName, formatStr, oldRow.description ?? '', activeStatusId, oldRow.collection_id],
+      );
+      newId = ins.rows[0].id;
+      await client.query(`UPDATE media SET status_id = $1 WHERE id = $2`, [archivedStatusId, id]);
+      await client.query('COMMIT');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      client.release();
+      console.error(txErr);
+      await removeSavedFile();
+      return res.status(500).json({ error: 'Не удалось заменить медиа.' });
+    }
+    client.release();
+
+    const newRow = await fetchMediaRowById(newId, req.userId, roleName);
+    if (!newRow) return res.status(500).json({ error: 'Не удалось заменить медиа.' });
+
+    res.status(201).json({ media: mapMediaRow(newRow) });
+  } catch (err) {
+    console.error(err);
+    await removeSavedFile();
+    res.status(500).json({ error: 'Не удалось заменить медиа.' });
   }
 });
 

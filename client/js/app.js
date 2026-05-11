@@ -10,6 +10,7 @@ import { renderCollectionDetailPage } from './pages/collectionDetail.js';
 import { renderCollectionEditPage } from './pages/collectionEdit.js';
 import { renderCollectionNewPage } from './pages/collectionNew.js';
 import { renderMediaNewPage } from './pages/mediaNew.js';
+import { renderMediaDetailPage } from './pages/mediaDetail.js';
 import { renderTaskDetailPage } from './pages/taskDetail.js';
 import { renderTaskEditPage } from './pages/taskEdit.js';
 import { renderTaskNewPage } from './pages/taskNew.js';
@@ -40,6 +41,7 @@ function isProtectedRoute(normalized) {
   if (segs[0] === 'tasks' && segs.length === 1) return true;
   if (segs[0] === 'collections' && segs.length === 1) return true;
   if (segs[0] === 'media' && segs.length === 1) return true;
+  if (segs[0] === 'media' && segs.length === 2 && /^\d+$/.test(segs[1])) return true;
   return false;
 }
 
@@ -225,6 +227,17 @@ function route() {
       return;
     }
     renderCollectionsListPage(appRoot, searchParams);
+    return;
+  }
+
+  if (segs[0] === 'media' && segs.length === 2 && /^\d+$/.test(segs[1])) {
+    const roleName = getUserSnapshot()?.roleName;
+    if (roleName === 'Клиент' || roleName === 'Внешний подрядчик') {
+      history.replaceState(null, '', '#/home');
+      renderHomePage(appRoot);
+      return;
+    }
+    renderMediaDetailPage(appRoot, segs[1]);
     return;
   }
 
