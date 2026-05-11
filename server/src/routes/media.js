@@ -297,7 +297,14 @@ router.get('/media', requireAuth, async (req, res) => {
         JOIN projects p ON p.id = t.project_id
         JOIN statuses_media sm ON sm.id = m.status_id
         ${whereSql}
-        ORDER BY m.upload_at DESC NULLS LAST, m.id DESC
+        ORDER BY
+          CASE sm.name
+            WHEN 'Активный' THEN 1
+            WHEN 'Архивный' THEN 2
+            WHEN 'Удалённый' THEN 3
+            ELSE 4
+          END,
+          m.upload_at DESC NULLS LAST, m.id DESC
     `;
 
     const [result, statusesResult] = await Promise.all([

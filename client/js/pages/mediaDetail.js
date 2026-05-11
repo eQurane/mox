@@ -213,7 +213,12 @@ export async function renderMediaDetailPage(container, mediaId) {
 
   // Левая колонка: плеер
   const playerCol = el('div', { className: 'media-detail__player' });
-  playerCol.append(buildMediaPlayer(media));
+  const playerWrap = buildMediaPlayer(media);
+  const mediaKind = isProbablyImage(media.format, media.path)
+    ? 'image'
+    : mediaKindFromExtension(media.format);
+  if (mediaKind === 'video') playerCol.classList.add('media-detail__player--dark');
+  playerCol.append(playerWrap);
   layout.append(playerCol);
 
   // Правая колонка: сайдбар с метаданными
@@ -542,15 +547,17 @@ export async function renderMediaDetailPage(container, mediaId) {
   // --- Загрузка комментариев ---
   function buildCommentItem(comment) {
     const item = el('li', { className: 'comments-list__item' });
-    const meta = el(
-      'div',
-      { className: 'comments-list__meta' },
+    const metaChildren = [
       el('span', { className: 'comments-list__author', textContent: comment.userName ?? '' }),
-      el('span', {
-        className: 'comments-list__date',
-        textContent: formatDateTimeRu(comment.createdAt),
-      }),
-    );
+    ];
+    if (comment.roleName) {
+      metaChildren.push(el('span', { className: 'comments-list__role', textContent: comment.roleName }));
+    }
+    if (comment.userEmail) {
+      metaChildren.push(el('span', { className: 'comments-list__email', textContent: comment.userEmail }));
+    }
+    metaChildren.push(el('span', { className: 'comments-list__date', textContent: formatDateTimeRu(comment.createdAt) }));
+    const meta = el('div', { className: 'comments-list__meta' }, ...metaChildren);
     const textEl = el('p', {
       className: 'comments-list__text',
       textContent: comment.text ?? '',

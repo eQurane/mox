@@ -3,6 +3,7 @@ import { fetchMe } from '../api/auth.js';
 import { clearSession, getToken, setSession } from '../auth/session.js';
 import { appendDashboardSectionTabs } from '../nav/dashboardTabs.js';
 import { attachCoverThumb } from '../utils/mediaCardThumb.js';
+import { renderNotificationBell } from '../utils/notificationBell.js';
 const ICON_ACCOUNT = '/icons/account-24.svg';
 const ICON_SEARCH = '/icons/search-24.svg';
 const ICON_UPDATE = '/icons/update-24.svg';
@@ -200,7 +201,10 @@ export async function renderHomePage(container) {
   userWrap.append(userBtn, panel);
   panel.addEventListener('click', (e) => e.stopPropagation());
 
-  actions.append(refreshBtn, userWrap);
+  actions.append(refreshBtn);
+  const bellCleanup = renderNotificationBell(actions);
+  window.addEventListener('hashchange', () => bellCleanup(), { once: true });
+  actions.append(userWrap);
   header.append(brand, actions);
   main.append(header);
 

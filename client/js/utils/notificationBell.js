@@ -40,6 +40,10 @@ export function renderNotificationBell(container) {
     return () => {};
   }
 
+  // Инициализируем lastSeen при первом использовании, чтобы старые
+  // уведомления не светились как непрочитанные
+  if (!getLastSeen()) setLastSeen();
+
   /** @type {Array<{mediaId:number, mediaName:string, text:string, createdAt:string, commenterName:string}>} */
   let notifications = [];
   let dropdownOpen = false;
@@ -147,16 +151,18 @@ export function renderNotificationBell(container) {
     setMenuOpen(!dropdownOpen);
   });
 
+  const listenerAbort = new AbortController();
+
   document.addEventListener('click', () => {
     if (dropdownOpen) setMenuOpen(false);
-  });
+  }, { signal: listenerAbort.signal });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && dropdownOpen) {
       setMenuOpen(false);
       btn.focus();
     }
-  });
+  }, { signal: listenerAbort.signal });
 
   async function refresh() {
     try {
@@ -171,5 +177,8 @@ export function renderNotificationBell(container) {
   refresh();
   const intervalId = setInterval(refresh, POLL_INTERVAL_MS);
 
-  return () => clearInterval(intervalId);
+  return () => {
+    clearInterval(intervalId);
+    listenerAbort.abort();
+  };
 }

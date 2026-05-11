@@ -273,7 +273,7 @@ PATCH /api/projects/:id              → 200 | 400 | 401 | 403 | 404 | 500  (Bea
 
 Если указаны **оба** `projectId` и `taskId`, применяются оба условия (несогласованная пара даёт пустой список).
 
-**200:** `{ media: [{ id, collectionId, path, name, format, description, uploadAt, statusId, statusName, collectionName, taskId, taskName, projectId, projectName }], statuses: [{ id, name }] }` — `statuses` — полный справочник **`statuses_media`** для фильтров (порядок по `id`).
+**200:** `{ media: [{ id, collectionId, path, name, format, description, uploadAt, statusId, statusName, collectionName, taskId, taskName, projectId, projectName }], statuses: [{ id, name }] }` — `statuses` — полный справочник **`statuses_media`** для фильтров (порядок по `id`). Сортировка медиа: сначала «Активный», затем «Архивный», затем «Удалённый», внутри статуса — `upload_at DESC`.
 
 **Ошибки:** `400` — валидация query; `401`; **`403`**; `500`.
 
@@ -392,7 +392,7 @@ PATCH /api/projects/:id              → 200 | 400 | 401 | 403 | 404 | 500  (Bea
 
 **Доступ:** Менеджер, Админ, Исполнитель (Клиент и Внешний подрядчик — **`403`**). Видимость медиа — та же, что у **`GET /api/media/:id`**.
 
-**200:** `{ comments: [{ id, text, createdAt, userName }] }` — порядок по `created_at` ASC.
+**200:** `{ comments: [{ id, text, createdAt, userName, userEmail, roleName }] }` — порядок по `created_at` ASC.
 
 **Ошибки:** `400`; `401`; `403`; `404`; `500`.
 
@@ -404,7 +404,7 @@ PATCH /api/projects/:id              → 200 | 400 | 401 | 403 | 404 | 500  (Bea
 
 **Body (JSON):** `text` (string, trim, непустой); иначе **`400`**.
 
-**201:** `{ comment: { id, text, createdAt, userName } }`.
+**201:** `{ comment: { id, text, createdAt, userName, userEmail, roleName } }`.
 
 **Ошибки:** `400`; `401`; `403`; `404`; `500`.
 

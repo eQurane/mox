@@ -6,6 +6,7 @@ import { fetchMe } from '../api/auth.js';
 import { appendDashboardSectionTabs } from '../nav/dashboardTabs.js';
 import { clearSession, getToken, setSession } from '../auth/session.js';
 import { attachMediaCardThumb } from '../utils/mediaCardThumb.js';
+import { renderNotificationBell } from '../utils/notificationBell.js';
 
 const ICON_ACCOUNT = '/icons/account-24.svg';
 const ICON_SEARCH = '/icons/search-24.svg';
@@ -121,22 +122,52 @@ function buildMediaCard(item) {
   const mslug = mediaStatusSlug(item.statusName);
   const card = el('article', {
     className: `project-card project-card--static project-card--link project-detail__media-card project-card--status-unknown`,
+    style: 'cursor:pointer',
+  });
+
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('a')) return;
+    location.hash = `#/media/${encodeURIComponent(String(item.id))}`;
   });
 
   const mediaTop = el('div');
   attachMediaCardThumb(mediaTop, item);
 
-  const projectLink =
-    item.projectId != null
-      ? el('a', {
-          className: 'project-card__muted project-card__project-link',
+  // Контекстный блок: проект → ТЗ → коллекция
+  const contextBlock = el('div', { className: 'project-card__context' });
+  if (item.projectId != null) {
+    contextBlock.append(
+      el('p', { className: 'project-card__context-row' },
+        el('a', {
+          className: 'project-card__context-link',
           href: `#/project/${encodeURIComponent(String(item.projectId))}`,
-          textContent: `Проект: ${item.projectName ?? '—'}`,
-        })
-      : el('p', {
-          className: 'project-card__muted',
-          textContent: `Проект: ${item.projectName ?? '—'}`,
-        });
+          textContent: item.projectName ?? '—',
+        }),
+      ),
+    );
+  }
+  if (item.taskId != null && item.projectId != null) {
+    contextBlock.append(
+      el('p', { className: 'project-card__context-row' },
+        el('a', {
+          className: 'project-card__context-link',
+          href: `#/project/${encodeURIComponent(String(item.projectId))}/tasks/${encodeURIComponent(String(item.taskId))}`,
+          textContent: `ТЗ: ${item.taskName ?? '—'}`,
+        }),
+      ),
+    );
+  }
+  if (item.collectionId != null && item.projectId != null) {
+    contextBlock.append(
+      el('p', { className: 'project-card__context-row' },
+        el('a', {
+          className: 'project-card__context-link',
+          href: `#/project/${encodeURIComponent(String(item.projectId))}/collections/${encodeURIComponent(String(item.collectionId))}`,
+          textContent: `Коллекция: ${item.collectionName ?? '—'}`,
+        }),
+      ),
+    );
+  }
 
   const titleLink = el('a', {
     className: 'project-card__detail-title-link',
@@ -148,19 +179,11 @@ function buildMediaCard(item) {
     'div',
     { className: 'project-card__body' },
     el('h2', { className: 'project-card__title' }, titleLink),
-    el('p', {
-      className: 'project-card__goal',
-      textContent: item.description || '—',
-    }),
-    el('p', {
-      className: 'project-card__muted',
-      textContent: `${item.collectionName ?? '—'} · ТЗ: ${item.taskName ?? '—'}`,
-    }),
+    contextBlock,
     el('p', {
       className: 'project-card__dates',
       textContent: `${String(item.format || '').toUpperCase()} · ${formatDateTimeRu(item.uploadAt)}`,
     }),
-    projectLink,
     el(
       'div',
       { className: 'project-card__footer' },
@@ -273,7 +296,10 @@ export async function renderMediaListPage(container, searchParams) {
   );
   userWrap.append(userBtn, panel);
   panel.addEventListener('click', (e) => e.stopPropagation());
-  actions.append(refreshBtn, userWrap);
+  actions.append(refreshBtn);
+  const bellCleanup = renderNotificationBell(actions);
+  window.addEventListener('hashchange', () => bellCleanup(), { once: true });
+  actions.append(userWrap);
   header.append(brand, actions);
   main.append(header);
 
@@ -606,7 +632,7 @@ export async function renderMediaListPage(container, searchParams) {
       searchDebounceTimer = null;
       syncHash(filters);
       loadMedia();
-    }, 300);
+    }, 700);
   });
 
   function onFilterCommit() {

@@ -60,9 +60,12 @@ router.get('/media/:mediaId/comments', requireAuth, async (req, res) => {
     if (!visible) return res.status(404).json({ error: 'Медиа не найдено.' });
 
     const r = await pool.query(
-      `SELECT c.id, c.text, c.created_at, u.name AS user_name
+      `SELECT c.id, c.text, c.created_at,
+              u.name AS user_name, u.email AS user_email,
+              ro.name AS role_name
          FROM comments c
          JOIN users u ON u.id = c.user_id
+         JOIN roles ro ON ro.id = u.role_id
         WHERE c.media_id = $1
         ORDER BY c.created_at ASC`,
       [mediaId],
@@ -73,6 +76,8 @@ router.get('/media/:mediaId/comments', requireAuth, async (req, res) => {
       text: row.text,
       createdAt: row.created_at,
       userName: row.user_name,
+      userEmail: row.user_email,
+      roleName: row.role_name,
     }));
 
     res.json({ comments });
@@ -110,15 +115,23 @@ router.post('/media/:mediaId/comments', requireAuth, async (req, res) => {
     );
     const row = ins.rows[0];
 
-    const userRes = await pool.query(`SELECT name FROM users WHERE id = $1`, [req.userId]);
-    const userName = userRes.rows[0]?.name ?? '';
+    const userRes = await pool.query(
+      `SELECT u.name, u.email, r.name AS role_name
+         FROM users u
+         JOIN roles r ON r.id = u.role_id
+        WHERE u.id = $1`,
+      [req.userId],
+    );
+    const userRow = userRes.rows[0] ?? {};
 
     res.status(201).json({
       comment: {
         id: row.id,
         text: row.text,
         createdAt: row.created_at,
-        userName,
+        userName: userRow.name ?? '',
+        userEmail: userRow.email ?? '',
+        roleName: userRow.role_name ?? '',
       },
     });
   } catch (err) {

@@ -4,6 +4,8 @@
   box-sizing: border-box;
 }
 
+[hidden] { display: none !important; }
+
 :root {
   --bg: #f4f6fa;
   --surface: #ffffff;
@@ -304,6 +306,10 @@ body {
   margin: 0 auto;
   max-width: 1120px;
   padding: clamp(16px, 3vw, 28px) 16px 48px;
+}
+
+.media-detail-page.dashboard {
+  max-width: 1440px;
 }
 
 .app-header {
@@ -1253,7 +1259,6 @@ a.button {
   display: grid;
   grid-template-columns: 1fr;
   gap: 20px;
-  max-width: 1120px;
   margin: 0 auto 24px;
 }
 
@@ -1268,11 +1273,15 @@ a.button {
 .media-detail__player {
   border-radius: var(--radius);
   overflow: hidden;
-  background: #0c0c0f;
+  background: transparent;
   min-height: 240px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.media-detail__player--dark {
+  background: #0c0c0f;
 }
 
 .media-player {
@@ -1318,15 +1327,14 @@ a.button {
 
 .media-player__kind-icon {
   display: block;
-  opacity: 0.55;
-  filter: brightness(0) invert(1);
+  opacity: 0.6;
 }
 
 .media-player__kind-label {
   margin: 0;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--muted);
   letter-spacing: 0.08em;
 }
 
@@ -1656,6 +1664,39 @@ a.button {
 }
 
 .notification-bell__item-meta {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* Медиа-карточка: блок контекста (проект / ТЗ / коллекция) */
+
+.project-card__context {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 4px 0;
+}
+
+.project-card__context-row {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.project-card__context-link {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.project-card__context-link:hover {
+  color: var(--accent);
+}
+
+/* Комментарии: роль и email */
+
+.comments-list__role,
+.comments-list__email {
   font-size: 0.75rem;
   color: var(--muted);
 }

@@ -250,7 +250,12 @@ export async function renderTaskDetailPage(container, projectId, taskId) {
   function buildMediaCard(item) {
     const mslug = mediaStatusSlug(item.statusName);
     const card = el('article', {
-      className: `project-card project-card--static project-detail__media-card project-card--status-unknown`,
+      className: `project-card project-card--static project-card--link project-detail__media-card project-card--status-unknown`,
+      style: 'cursor:pointer',
+    });
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
+      location.hash = `#/media/${encodeURIComponent(String(item.id))}`;
     });
     const collection = collById.get(item.collectionId);
     const collectionTitle = collection?.name ?? '—';
