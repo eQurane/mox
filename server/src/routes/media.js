@@ -387,7 +387,8 @@ router.post('/media', requireAuth, (req, res, next) => {
 
     const isManager = ROLES_ALL_PROJECTS.has(roleName);
     const isContractor = isExternalContractorAccountRole(roleName);
-    if (!isManager && !isContractor) {
+    const isExecutor = roleName === 'Исполнитель';
+    if (!isManager && !isContractor && !isExecutor) {
       await removeSavedFile();
       return res.status(403).json({ error: 'Недостаточно прав.' });
     }

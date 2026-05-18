@@ -381,7 +381,11 @@ export async function renderTaskDetailPage(container, projectId, taskId) {
   );
 
   const mediaGrid = el('div', { className: 'projects-grid projects-grid--detail' });
-  if (canManageTasks || roleName === 'Внешний подрядчик') {
+  if (
+    canManageTasks
+    || roleName === 'Внешний подрядчик'
+    || roleName === 'Исполнитель'
+  ) {
     mediaGrid.append(buildSectionCreateCard(hrefMediaNew, 'Добавить медиа'));
   }
   if (mediaList.length === 0) {

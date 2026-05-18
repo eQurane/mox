@@ -142,7 +142,11 @@ function route() {
       && segs[5] === 'new'
     ) {
       const colNewRole = getUserSnapshot()?.roleName;
-      if (colNewRole !== 'Админ' && colNewRole !== 'Менеджер') {
+      if (
+        colNewRole !== 'Админ'
+        && colNewRole !== 'Менеджер'
+        && colNewRole !== 'Исполнитель'
+      ) {
         history.replaceState(null, '', '#/home');
         renderHomePage(appRoot);
         return;
@@ -156,7 +160,11 @@ function route() {
     }
     if (segs[2] === 'collections' && segs[3] === 'new' && segs.length === 4) {
       const colNewRole = getUserSnapshot()?.roleName;
-      if (colNewRole !== 'Админ' && colNewRole !== 'Менеджер') {
+      if (
+        colNewRole !== 'Админ'
+        && colNewRole !== 'Менеджер'
+        && colNewRole !== 'Исполнитель'
+      ) {
         history.replaceState(null, '', '#/home');
         renderHomePage(appRoot);
         return;
@@ -189,6 +197,7 @@ function route() {
         mediaNewRole !== 'Админ'
         && mediaNewRole !== 'Менеджер'
         && mediaNewRole !== 'Внешний подрядчик'
+        && mediaNewRole !== 'Исполнитель'
       ) {
         history.replaceState(null, '', '#/home');
         renderHomePage(appRoot);

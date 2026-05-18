@@ -249,10 +249,15 @@ export async function renderCollectionDetailPage(container, projectId, collectio
   );
 
   const mediaGrid = el('div', { className: 'projects-grid projects-grid--detail' });
-  if (roleName === 'Админ' || roleName === 'Менеджер' || roleName === 'Внешний подрядчик') {
+  if (
+    roleName === 'Админ'
+    || roleName === 'Менеджер'
+    || roleName === 'Внешний подрядчик'
+    || roleName === 'Исполнитель'
+  ) {
     mediaGrid.append(buildSectionCreateCard(hrefMediaNew, 'Добавить медиа'));
   }
-  if (mediaList.length === 0 && (roleName === 'Клиент' || roleName === 'Исполнитель')) {
+  if (mediaList.length === 0 && roleName === 'Клиент') {
     mediaGrid.append(el('p', { className: 'project-detail__muted', textContent: 'Нет медиа.' }));
   } else {
     mediaList.forEach((m) => mediaGrid.append(buildMediaCard(m)));

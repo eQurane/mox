@@ -6,6 +6,8 @@ import { isExternalContractorAccountRole, sqlTaskHasContractorType } from '../ac
 const router = express.Router();
 
 const ROLES_ALL_PROJECTS = new Set(['Админ', 'Менеджер']);
+/** Создание коллекции: менеджер/админ или исполнитель (членство в проекте проверяется ниже). */
+const ROLES_CAN_POST_COLLECTION = new Set(['Админ', 'Менеджер', 'Исполнитель']);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 async function fetchRoleNameByUserId(db, userId) {
@@ -34,6 +36,23 @@ async function requireManagerOrAdmin(res, userId) {
     return null;
   }
   if (!ROLES_ALL_PROJECTS.has(roleName)) {
+    res.status(403).json({ error: 'Недостаточно прав.' });
+    return null;
+  }
+  return roleName;
+}
+
+/**
+ * @param {import('express').Response} res
+ * @returns {Promise<string | null>}
+ */
+async function requireRoleForNewCollection(res, userId) {
+  const roleName = await fetchRoleNameByUserId(pool, userId);
+  if (!roleName) {
+    res.status(401).json({ error: 'Пользователь не найден.' });
+    return null;
+  }
+  if (!ROLES_CAN_POST_COLLECTION.has(roleName)) {
     res.status(403).json({ error: 'Недостаточно прав.' });
     return null;
   }
@@ -396,7 +415,7 @@ router.get('/collections/:id', requireAuth, async (req, res) => {
 
 router.post('/collections', requireAuth, async (req, res) => {
   try {
-    const roleName = await requireManagerOrAdmin(res, req.userId);
+    const roleName = await requireRoleForNewCollection(res, req.userId);
     if (!roleName) return;
 
     const taskId = Number(req.body?.taskId);
