@@ -81,7 +81,7 @@ function route() {
       renderHomePage(appRoot);
       return;
     }
-    renderAdminPage(appRoot);
+    renderAdminPage(appRoot, searchParams);
     return;
   }
 

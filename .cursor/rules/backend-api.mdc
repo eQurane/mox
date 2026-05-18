@@ -19,7 +19,7 @@ alwaysApply: false
 | `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASSWORD` | `db.js` | Пул PostgreSQL; имя БД по умолчанию `mox`. |
 | `JWT_SECRET` | `jwtSecret.js` | Секрет подписи JWT; в dev допускается не задавать (используется небезопасный запасной вариант). |
 | `JWT_EXPIRES_IN` | `jwtSecret.js` | Срок жизни JWT (строка для `jsonwebtoken`, по умолчанию `7d`). |
-| `REGISTER_USER_STATUS` | `routes/auth.js` | Имя строки в `statuses_users` для нового пользователя (по умолчанию `Активный`). |
+| `REGISTER_USER_STATUS` | `routes/auth.js` | **Обязательна:** имя строки в `statuses_users` для нового пользователя при `POST /api/auth/register` (пример в `server/.env.example`). Если переменная не задана или имя отсутствует в БД — **`500`**. |
 | `INIT_DATE` | `db_init/init.js`, `routes/projects.js`, **`routes/tasks.js`** | Нижняя граница дат по CHECK в схеме и при валидации `POST/PATCH …/tasks` и `POST …/projects` (дефолт `2026-05-01`; должен совпадать с тем, что зашито в БД при создании таблиц). |
 
 ## Эндпоинты
@@ -51,6 +51,15 @@ POST /api/media/:id/replace         → 201 | 400 | 401 | 403 | 404 | 500  (Bear
 GET  /api/media/:mediaId/comments   → 200 | 400 | 401 | 403 | 404 | 500  (Bearer)
 POST /api/media/:mediaId/comments   → 201 | 400 | 401 | 403 | 404 | 500  (Bearer)
 GET  /api/notifications             → 200 | 401 | 403 | 500  (Bearer)
+GET  /api/admin/users               → 200 | 401 | 403 | 500  (Bearer, только Админ)
+GET  /api/admin/users/:id            → 200 | 400 | 401 | 403 | 404 | 500  (Bearer)
+PATCH /api/admin/users/:id           → 200 | 400 | 401 | 403 | 404 | 500  (Bearer)
+POST /api/admin/users/:id/approve   → 200 | 400 | 401 | 403 | 404 | 500  (Bearer)
+DELETE /api/admin/users/:id         → 200 | 400 | 401 | 403 | 404 | 409 | 500  (Bearer)
+GET  /api/admin/overview            → 200 | 401 | 403 | 500  (Bearer)
+GET  /api/admin/issues               → 200 | 401 | 403 | 500  (Bearer)
+GET  /api/admin/storage/large-files  → 200 | 401 | 403 | 500  (Bearer)
+DELETE /api/admin/media/:id         → 200 | 400 | 401 | 403 | 404 | 500  (Bearer)
 GET  /api/projects/create-options     → 200 | 401 | 403 | 500  (Bearer)
 POST /api/projects                   → 201 | 400 | 401 | 403 | 500  (Bearer)
 PATCH /api/projects/:id              → 200 | 400 | 401 | 403 | 404 | 500  (Bearer)
@@ -74,7 +83,7 @@ PATCH /api/projects/:id              → 200 | 400 | 401 | 403 | 404 | 500  (Bea
 
 **201:** `{ id, name, email, roleId, roleName }`.
 
-**Ошибки (JSON):** `400` — валидация; `409` — дубликат `email`; `500` — БД или неизвестный статус пользователя.
+**Ошибки (JSON):** `400` — валидация; `409` — дубликат `email`; `500` — БД, не задан **`REGISTER_USER_STATUS`**, или имя статуса не найдено в `statuses_users`.
 
 **⚠️ Dev:** клиент может указать любую роль из БД; перед продакшеном ограничить whitelist.
 
@@ -421,3 +430,49 @@ PATCH /api/projects/:id              → 200 | 400 | 401 | 403 | 404 | 500  (Bea
 **200:** `{ notifications: [{ mediaId, mediaName, text, createdAt, commenterName, projectId, taskId, collectionId }] }`.
 
 **Ошибки:** `401`; `403`; `500`.
+
+### Администрирование (`/api/admin/…`)
+
+Все маршруты: **`Authorization: Bearer`**, промежуточное ПО **`requireAuth`** + проверка роли **«Админ»** из БД (`middleware/requireAdmin.js`); иначе **`401`** / **`403`**.
+
+#### GET `/api/admin/users`
+
+**Query (опционально):** `q` — подстрока по `email` и `name` (ILIKE); `statusId`, `roleId`; `limit` (по умолчанию 50, макс. 200), `offset`.
+
+**200:** `{ users: [{ id, name, email, registeredAt, roleId, roleName, statusId, statusName }], total, roles: [{ id, name }], userStatuses: [{ id, name }] }`.
+
+#### GET `/api/admin/users/:id`
+
+**200:** `{ user: { … }, projects: [{ id, name, includedAt }] }` — только активные участия (`user_project.excluded_at IS NULL`).
+
+#### PATCH `/api/admin/users/:id`
+
+**Body (JSON):** `roleId` и/или `statusId` (целые ≥ 1). Нельзя снять с себя роль Админ или установить себе статус «Отключён» / «На подтверждении». Должен остаться ≥ 1 активный Админ (статус «Активный»).
+
+#### POST `/api/admin/users/:id/approve`
+
+Переводит пользователя со статуса **«На подтверждении»** в **«Активный»**; иначе **`400`**.
+
+#### DELETE `/api/admin/users/:id`
+
+Только пользователь со статусом **«На подтверждении»**, без строк в `user_project` и `comments`; иначе **`400`** / **`409`**.
+
+#### GET `/api/admin/overview`
+
+**200:** агрегаты: `usersByStatus`, `projectCount`, `taskCount`, `collectionCount`, `mediaByStatus`.
+
+#### GET `/api/admin/issues`
+
+**200:** `projectsWithoutMembers`, `pendingUsers`, `tasksWithoutCollections`, `collectionsWithoutMedia` (каждый список ограничен на сервере).
+
+#### GET `/api/admin/storage/large-files`
+
+**Query:** `limit` (макс. 200).
+
+**Поведение:** сканирование каталога **`storage/`**; в ответ попадают только файлы **> 50 МБ**; сопоставление с записью `media` по полю `path` вида `/storage/<имя файла>`.
+
+**200:** `{ minSizeBytes, files: [{ fileName, sizeBytes, publicPath, orphan, media | null }] }` — `orphan: true`, если файла нет в БД.
+
+#### DELETE `/api/admin/media/:id`
+
+**Жёсткое удаление:** удаляются комментарии к медиа, строка `media`, файл на диске (если путь корректен); при отсутствии файла на диске запись в БД всё равно удаляется.

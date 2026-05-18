@@ -10,7 +10,14 @@ import { bearerToken } from '../middleware/auth.js';
  * Restrict to a whitelist or a fixed role before production.
  */
 
-const REGISTER_USER_STATUS = process.env.REGISTER_USER_STATUS || 'Активный';
+/** Имя строки в statuses_users; задаётся в .env (см. server/.env.example). */
+function registerUserStatusFromEnv() {
+  const v = process.env.REGISTER_USER_STATUS;
+  if (typeof v !== 'string' || !v.trim()) {
+    return null;
+  }
+  return v.trim();
+}
 const ACTIVE_USER_STATUS = 'Активный';
 const PASSWORD_MIN_LENGTH = 8;
 const BCRYPT_COST = 10;
@@ -64,13 +71,21 @@ router.post('/auth/register', async (req, res) => {
       return badRequest(res, 'Выбранная роль недоступна.');
     }
 
+    const registerStatusName = registerUserStatusFromEnv();
+    if (!registerStatusName) {
+      console.error('REGISTER_USER_STATUS is not set in environment.');
+      return res.status(500).json({
+        error: 'Регистрация недоступна: задайте REGISTER_USER_STATUS в окружении сервера (см. .env.example).',
+      });
+    }
+
     const statusResult = await pool.query(
       'SELECT id FROM statuses_users WHERE name = $1 LIMIT 1',
-      [REGISTER_USER_STATUS],
+      [registerStatusName],
     );
     if (statusResult.rowCount === 0) {
-      console.error(`Unknown statuses_users.name: "${REGISTER_USER_STATUS}"`);
-      return res.status(500).json({ error: 'Ошибка конфигурации статуса.' });
+      console.error(`Unknown statuses_users.name: "${registerStatusName}"`);
+      return res.status(500).json({ error: 'Ошибка конфигурации статуса REGISTER_USER_STATUS.' });
     }
     const statusId = statusResult.rows[0].id;
 

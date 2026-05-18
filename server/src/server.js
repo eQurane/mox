@@ -12,6 +12,7 @@ import collectionsRouter from './routes/collections.js';
 import mediaRouter from './routes/media.js';
 import commentsRouter from './routes/comments.js';
 import notificationsRouter from './routes/notifications.js';
+import adminRouter from './routes/admin.js';
 import { storageDir } from './paths.js';
 
 dotenv.config();
@@ -38,6 +39,7 @@ app.use('/api', collectionsRouter);
 app.use('/api', mediaRouter);
 app.use('/api', commentsRouter);
 app.use('/api', notificationsRouter);
+app.use('/api', adminRouter);
 app.use(express.static(clientDir));
 
 app.listen(PORT, () => {
