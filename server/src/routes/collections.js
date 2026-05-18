@@ -6,8 +6,8 @@ import { isExternalContractorAccountRole, sqlTaskHasContractorType } from '../ac
 const router = express.Router();
 
 const ROLES_ALL_PROJECTS = new Set(['Админ', 'Менеджер']);
-/** Создание коллекции: менеджер/админ или исполнитель (членство в проекте проверяется ниже). */
-const ROLES_CAN_POST_COLLECTION = new Set(['Админ', 'Менеджер', 'Исполнитель']);
+/** Создание коллекции: менеджер/админ, исполнитель или внешний подрядчик (членство и тип ТЗ — ниже). */
+const ROLES_CAN_POST_COLLECTION = new Set(['Админ', 'Менеджер', 'Исполнитель', 'Внешний подрядчик']);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 async function fetchRoleNameByUserId(db, userId) {
@@ -438,6 +438,16 @@ router.post('/collections', requireAuth, async (req, res) => {
     const project = await fetchProjectDatesIfVisible(projectId, req.userId, roleName);
     if (!project) {
       return res.status(404).json({ error: 'Техническое задание не найдено.' });
+    }
+
+    if (isExternalContractorAccountRole(roleName)) {
+      const scopeCheck = await pool.query(
+        `SELECT 1 FROM tasks t WHERE t.id = $1 AND ${sqlTaskHasContractorType('t')}`,
+        [taskId],
+      );
+      if (scopeCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Техническое задание не найдено.' });
+      }
     }
 
     const ins = await pool.query(

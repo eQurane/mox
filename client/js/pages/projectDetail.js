@@ -185,8 +185,7 @@ export async function renderProjectDetailPage(container, projectId) {
   const canManageTasks = roleName === 'Админ' || roleName === 'Менеджер';
   const hideGlobalBrowseLinks =
     roleName === 'Клиент' || roleName === 'Внешний подрядчик';
-  const hideNewCollectionControls =
-    roleName === 'Клиент' || roleName === 'Внешний подрядчик';
+  const hideNewCollectionControls = roleName === 'Клиент';
 
   const taskById = new Map(tasks.map((t) => [t.id, t]));
   const collById = new Map(collections.map((c) => [c.id, c]));

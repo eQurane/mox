@@ -1,6 +1,7 @@
 import { fetchProjectById } from '../api/projects.js';
 import { fetchTaskById, fetchTasks } from '../api/tasks.js';
 import { createCollection } from '../api/collections.js';
+import { getUserSnapshot } from '../auth/session.js';
 import {
   attachClearError,
   clearFieldErrors,
@@ -202,11 +203,24 @@ export async function renderCollectionNewPage(container, projectId, taskId) {
   loading.remove();
 
   if (tasks.length === 0) {
-    showMessage('В проекте пока нет технических заданий. Сначала создайте ТЗ.', true);
-    card.append(el(
-      'a',
-      { className: 'button primary', href: `#/project/${projectId}/tasks/new`, textContent: 'Добавить ТЗ' },
-    ));
+    const isContractor = getUserSnapshot()?.roleName === 'Внешний подрядчик';
+    showMessage(
+      isContractor
+        ? 'Нет доступных технических заданий с типом исполнителя «Внешний подрядчик». Обратитесь к менеджеру проекта.'
+        : 'В проекте пока нет технических заданий. Сначала создайте ТЗ.',
+      true,
+    );
+    if (!isContractor) {
+      card.append(el(
+        'a',
+        { className: 'button primary', href: `#/project/${projectId}/tasks/new`, textContent: 'Добавить ТЗ' },
+      ));
+    } else {
+      card.append(el(
+        'a',
+        { className: 'button button-ghost', href: `#/project/${projectId}`, textContent: 'К проекту' },
+      ));
+    }
     return;
   }
 

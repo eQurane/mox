@@ -147,8 +147,7 @@ export async function renderTaskDetailPage(container, projectId, taskId) {
   const canManageTasks = roleName === 'Админ' || roleName === 'Менеджер';
   const hideGlobalBrowseLinks =
     roleName === 'Клиент' || roleName === 'Внешний подрядчик';
-  const hideNewCollectionControls =
-    roleName === 'Клиент' || roleName === 'Внешний подрядчик';
+  const hideNewCollectionControls = roleName === 'Клиент';
   const pidNum = Number(projectId);
   const taskPid = task.projectId;
 

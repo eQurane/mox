@@ -146,6 +146,7 @@ function route() {
         colNewRole !== 'Админ'
         && colNewRole !== 'Менеджер'
         && colNewRole !== 'Исполнитель'
+        && colNewRole !== 'Внешний подрядчик'
       ) {
         history.replaceState(null, '', '#/home');
         renderHomePage(appRoot);
@@ -164,6 +165,7 @@ function route() {
         colNewRole !== 'Админ'
         && colNewRole !== 'Менеджер'
         && colNewRole !== 'Исполнитель'
+        && colNewRole !== 'Внешний подрядчик'
       ) {
         history.replaceState(null, '', '#/home');
         renderHomePage(appRoot);
