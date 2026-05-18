@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { isExternalContractorAccountRole, sqlTaskHasContractorType } from '../access/contractorTaskScope.js';
 
 const router = express.Router();
 
@@ -11,9 +12,22 @@ const ACTIVE_USER_STATUS = 'Активный';
 
 /** Роли пользователей, доступные для добавления в проект создателем с данной ролью. */
 const ASSIGNABLE_ROLE_NAMES = {
-  Админ: new Set(['Исполнитель', 'Клиент', 'Менеджер']),
-  Менеджер: new Set(['Исполнитель', 'Клиент']),
+  Админ: new Set(['Исполнитель', 'Клиент', 'Менеджер', 'Внешний подрядчик']),
+  Менеджер: new Set(['Исполнитель', 'Клиент', 'Внешний подрядчик']),
 };
+
+function projectCoverMediaSubquerySql(contractorRestricted) {
+  const taskRestrict = contractorRestricted ? ` AND ${sqlTaskHasContractorType('t')}` : '';
+  return `(
+               SELECT m.path
+               FROM media m
+               JOIN collections c ON c.id = m.collection_id
+               JOIN tasks t ON t.id = c.task_id
+               WHERE t.project_id = p.id${taskRestrict}
+               ORDER BY m.upload_at DESC
+               LIMIT 1
+             )`;
+}
 
 async function fetchRoleNameByUserId(db, userId) {
   const roleResult = await db.query(
@@ -208,12 +222,10 @@ router.get('/projects', requireAuth, async (req, res) => {
     if (!roleName) {
       return res.status(401).json({ error: 'Пользователь не найден.' });
     }
-    if (roleName === 'Внешний подрядчик') {
-      return res.status(403).json({ error: 'Недостаточно прав.' });
-    }
-
     const seeAll = ROLES_ALL_PROJECTS.has(roleName);
+    const contractorRestricted = isExternalContractorAccountRole(roleName);
 
+    const coverSql = projectCoverMediaSubquerySql(contractorRestricted);
     const baseSelect = `
       SELECT p.id,
              p.name,
@@ -221,15 +233,7 @@ router.get('/projects', requireAuth, async (req, res) => {
              p.start_date,
              p.end_date,
              sp.name AS status_name,
-             (
-               SELECT m.path
-               FROM media m
-               JOIN collections c ON c.id = m.collection_id
-               JOIN tasks t ON t.id = c.task_id
-               WHERE t.project_id = p.id
-               ORDER BY m.upload_at DESC
-               LIMIT 1
-             ) AS cover_path
+             ${coverSql} AS cover_path
       FROM projects p
       JOIN statuses_projects sp ON sp.id = p.status_id
     `;
@@ -275,12 +279,10 @@ router.get('/projects/:id', requireAuth, async (req, res) => {
     if (!roleName) {
       return res.status(401).json({ error: 'Пользователь не найден.' });
     }
-    if (roleName === 'Внешний подрядчик') {
-      return res.status(403).json({ error: 'Недостаточно прав.' });
-    }
-
     const seeAll = ROLES_ALL_PROJECTS.has(roleName);
+    const contractorRestricted = isExternalContractorAccountRole(roleName);
 
+    const projectCoverSel = projectCoverMediaSubquerySql(contractorRestricted);
     const projectSql = `
       SELECT p.id,
              p.name,
@@ -289,15 +291,7 @@ router.get('/projects/:id', requireAuth, async (req, res) => {
              p.end_date,
              p.status_id,
              sp.name AS status_name,
-             (
-               SELECT m.path
-               FROM media m
-               JOIN collections c ON c.id = m.collection_id
-               JOIN tasks t ON t.id = c.task_id
-               WHERE t.project_id = p.id
-               ORDER BY m.upload_at DESC
-               LIMIT 1
-             ) AS cover_path
+             ${projectCoverSel} AS cover_path
       FROM projects p
       JOIN statuses_projects sp ON sp.id = p.status_id
       WHERE p.id = $1
@@ -333,6 +327,8 @@ router.get('/projects/:id', requireAuth, async (req, res) => {
       memberUserIds,
     };
 
+    const taskRestrictSql = contractorRestricted ? ` AND ${sqlTaskHasContractorType('t')}` : '';
+
     const tasksResult = await pool.query(
       `SELECT t.id,
               t.name,
@@ -351,7 +347,7 @@ router.get('/projects/:id', requireAuth, async (req, res) => {
          FROM tasks t
          JOIN roles r ON r.id = t.role_id
          JOIN statuses_tasks st ON st.id = t.status_id
-        WHERE t.project_id = $1
+        WHERE t.project_id = $1${taskRestrictSql}
         ORDER BY t.id ASC`,
       [projectId],
     );
@@ -382,7 +378,7 @@ router.get('/projects/:id', requireAuth, async (req, res) => {
               ) AS cover_path
          FROM collections c
          JOIN tasks t ON t.id = c.task_id
-        WHERE t.project_id = $1
+        WHERE t.project_id = $1${taskRestrictSql}
         ORDER BY c.id ASC`,
       [projectId],
     );
@@ -410,7 +406,7 @@ router.get('/projects/:id', requireAuth, async (req, res) => {
          JOIN statuses_media sm ON sm.id = m.status_id
          JOIN collections c ON c.id = m.collection_id
          JOIN tasks t ON t.id = c.task_id
-        WHERE t.project_id = $1
+        WHERE t.project_id = $1${taskRestrictSql}
         ORDER BY m.upload_at DESC`,
       [projectId],
     );

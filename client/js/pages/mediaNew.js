@@ -1,6 +1,7 @@
 import { fetchCollections } from '../api/collections.js';
 import { fetchProjectById } from '../api/projects.js';
 import { uploadMedia } from '../api/media.js';
+import { getUserSnapshot } from '../auth/session.js';
 import { el } from './projectFormShared.js';
 
 /** Снимает подсветку drop безопасно при уходе со страницы (один слушатель на приложение). */
@@ -162,14 +163,30 @@ export async function renderMediaNewPage(container, projectId, searchParams) {
   loading.remove();
 
   if (collections.length === 0) {
-    showMessage('В проекте нет коллекций. Сначала создайте коллекцию.', true);
-    card.append(
-      el('a', {
-        className: 'button primary',
-        href: `#/project/${projectId}/collections/new`,
-        textContent: 'Новая коллекция',
-      }),
+    const isContractor = getUserSnapshot()?.roleName === 'Внешний подрядчик';
+    showMessage(
+      isContractor
+        ? 'В проекте нет доступных коллекций. Обратитесь к менеджеру проекта.'
+        : 'В проекте нет коллекций. Сначала создайте коллекцию.',
+      true,
     );
+    if (!isContractor) {
+      card.append(
+        el('a', {
+          className: 'button primary',
+          href: `#/project/${projectId}/collections/new`,
+          textContent: 'Новая коллекция',
+        }),
+      );
+    } else {
+      card.append(
+        el('a', {
+          className: 'button button-ghost',
+          href: `#/project/${projectId}`,
+          textContent: 'К проекту',
+        }),
+      );
+    }
     return;
   }
 

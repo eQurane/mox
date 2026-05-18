@@ -137,14 +137,11 @@ export async function renderMediaDetailPage(container, mediaId) {
     {
       type: 'button',
       className: 'button button-ghost button-icon',
-      'aria-label': 'Назад к списку медиа',
+      'aria-label': 'Назад',
       title: 'Назад',
     },
     toolbarIconImg(ICON_BACK),
   );
-  backBtn.addEventListener('click', () => {
-    location.hash = '#/media';
-  });
 
   const pageTitle = el('h1', { className: 'project-detail__page-title', textContent: 'Медиа' });
   toolbarStart.append(backBtn, pageTitle);
@@ -177,6 +174,7 @@ export async function renderMediaDetailPage(container, mediaId) {
     data = await fetchMediaById(mediaId);
   } catch (err) {
     loading.remove();
+    const contractorErr = getUserSnapshot()?.roleName === 'Внешний подрядчик';
     main.append(
       el(
         'div',
@@ -188,8 +186,8 @@ export async function renderMediaDetailPage(container, mediaId) {
         }),
         el('a', {
           className: 'button primary project-detail__back-link',
-          href: '#/media',
-          textContent: 'К списку медиа',
+          href: contractorErr ? '#/home' : '#/media',
+          textContent: contractorErr ? 'К проектам' : 'К списку медиа',
         }),
       ),
     );
@@ -201,10 +199,27 @@ export async function renderMediaDetailPage(container, mediaId) {
   const media = data.media ?? {};
   const user = getUserSnapshot() || {};
   const roleName = user.roleName;
-  const canEditDescription = ['Админ', 'Менеджер', 'Исполнитель'].includes(roleName);
+  const isContractorViewer = roleName === 'Внешний подрядчик';
+  const canEditDescription =
+    ['Админ', 'Менеджер', 'Исполнитель'].includes(roleName) && !isContractorViewer;
   const canReplace = ['Админ', 'Менеджер'].includes(roleName);
-  const canDelete = ['Админ', 'Менеджер', 'Исполнитель'].includes(roleName);
-  const canComment = ['Админ', 'Менеджер', 'Исполнитель'].includes(roleName);
+  const canDelete = ['Админ', 'Менеджер', 'Исполнитель'].includes(roleName) && !isContractorViewer;
+  const canComment = ['Админ', 'Менеджер', 'Исполнитель'].includes(roleName) && !isContractorViewer;
+
+  if (isContractorViewer) {
+    backBtn.title = 'К проекту';
+    backBtn.setAttribute('aria-label', 'К проекту');
+  }
+  backBtn.addEventListener('click', () => {
+    if (isContractorViewer) {
+      location.hash =
+        media.projectId != null
+          ? `#/project/${encodeURIComponent(String(media.projectId))}`
+          : '#/home';
+      return;
+    }
+    location.hash = '#/media';
+  });
 
   if (media.name) pageTitle.textContent = media.name;
 
@@ -476,6 +491,7 @@ export async function renderMediaDetailPage(container, mediaId) {
   main.append(layout);
 
   // --- Комментарии ---
+  if (!isContractorViewer) {
   const commentsSection = el('section', {
     className: 'comments-section',
     'aria-label': 'Комментарии',
@@ -589,4 +605,5 @@ export async function renderMediaDetailPage(container, mediaId) {
   }
 
   await loadComments();
+  }
 }

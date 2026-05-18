@@ -1,8 +1,6 @@
 /** @param {'home' | 'tasks' | 'collections' | 'media' | 'admin'} active */
 export function appendDashboardSectionTabs(nav, { active, roleName, isAdmin }) {
-  if (roleName !== 'Внешний подрядчик') {
-    nav.append(elTab('Проекты', '#/home', active === 'home'));
-  }
+  nav.append(elTab('Проекты', '#/home', active === 'home'));
   if (roleName !== 'Клиент' && roleName !== 'Внешний подрядчик') {
     nav.append(
       elTab('ТЗ', '#/tasks', active === 'tasks'),

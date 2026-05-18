@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { isExternalContractorAccountRole, sqlTaskHasContractorType } from '../access/contractorTaskScope.js';
 
 const router = express.Router();
 
@@ -243,11 +244,12 @@ router.get('/tasks', requireAuth, async (req, res) => {
     if (!roleName) {
       return res.status(401).json({ error: 'Пользователь не найден.' });
     }
-    if (roleName === 'Клиент' || roleName === 'Внешний подрядчик') {
+    if (roleName === 'Клиент') {
       return res.status(403).json({ error: 'Недостаточно прав.' });
     }
 
     const seeAll = ROLES_ALL_PROJECTS.has(roleName);
+    const contractorRestricted = isExternalContractorAccountRole(roleName);
 
     const qRaw = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     const projectIdRaw = req.query.projectId;
@@ -310,6 +312,10 @@ router.get('/tasks', requireAuth, async (req, res) => {
     if (!seeAll) {
       params.push(req.userId);
       p++;
+    }
+
+    if (contractorRestricted) {
+      conditions.push(sqlTaskHasContractorType('t'));
     }
 
     if (projectId !== null) {
@@ -412,11 +418,9 @@ router.get('/tasks/:id', requireAuth, async (req, res) => {
     if (!roleName) {
       return res.status(401).json({ error: 'Пользователь не найден.' });
     }
-    if (roleName === 'Внешний подрядчик') {
-      return res.status(403).json({ error: 'Недостаточно прав.' });
-    }
-
     const seeAll = ROLES_ALL_PROJECTS.has(roleName);
+    const contractorRestricted = isExternalContractorAccountRole(roleName);
+    const taskContractorSql = contractorRestricted ? ` AND ${sqlTaskHasContractorType('t')}` : '';
 
     const taskSql = `
       SELECT t.id,
@@ -442,7 +446,7 @@ router.get('/tasks/:id', requireAuth, async (req, res) => {
                AND up.user_id = $3
                AND up.excluded_at IS NULL
            )
-         )
+         )${taskContractorSql}
     `;
 
     const taskResult = await pool.query(taskSql, [taskId, seeAll, req.userId]);

@@ -183,6 +183,10 @@ export async function renderProjectDetailPage(container, projectId) {
   const user = getUserSnapshot() || {};
   const roleName = user.roleName;
   const canManageTasks = roleName === 'Админ' || roleName === 'Менеджер';
+  const hideGlobalBrowseLinks =
+    roleName === 'Клиент' || roleName === 'Внешний подрядчик';
+  const hideNewCollectionControls =
+    roleName === 'Клиент' || roleName === 'Внешний подрядчик';
 
   const taskById = new Map(tasks.map((t) => [t.id, t]));
   const collById = new Map(collections.map((c) => [c.id, c]));
@@ -343,7 +347,7 @@ export async function renderProjectDetailPage(container, projectId) {
     el(
       'h2',
       { className: 'project-detail__section-title project-detail__section-title--tasks' },
-      roleName !== 'Клиент' ? el('a', {
+      !hideGlobalBrowseLinks ? el('a', {
         className: 'project-detail__section-heading',
         href: hrefTasksList,
         textContent: 'Технические задания',
@@ -351,7 +355,7 @@ export async function renderProjectDetailPage(container, projectId) {
         className: 'project-detail__section-heading',
         textContent: 'Технические задания',
       }),
-      roleName !== 'Клиент' ? el(
+      !hideGlobalBrowseLinks ? el(
         'a',
         {
           className: 'button button-ghost button-icon project-detail__section-list-btn',
@@ -384,11 +388,11 @@ export async function renderProjectDetailPage(container, projectId) {
   }
 
   const colGrid = el('div', { className: 'projects-grid projects-grid--detail' });
-  if (roleName !== 'Клиент') {
+  if (!hideNewCollectionControls) {
     colGrid.append(buildSectionCreateCard(hrefCollectionsNew, 'Новая коллекция'));
   }
   if (collections.length === 0) {
-    if (roleName === 'Клиент') {
+    if (hideGlobalBrowseLinks) {
       colGrid.append(el('p', { className: 'project-detail__muted', textContent: 'Нет коллекций.' }));
     }
   } else {
@@ -401,7 +405,7 @@ export async function renderProjectDetailPage(container, projectId) {
     el(
       'h2',
       { className: 'project-detail__section-title project-detail__section-title--tasks' },
-      roleName !== 'Клиент' ? el('a', {
+      !hideGlobalBrowseLinks ? el('a', {
         className: 'project-detail__section-heading',
         href: hrefCollectionsList,
         textContent: 'Коллекции',
@@ -409,7 +413,7 @@ export async function renderProjectDetailPage(container, projectId) {
         className: 'project-detail__section-heading',
         textContent: 'Коллекции',
       }),
-      roleName !== 'Клиент' ? el(
+      !hideGlobalBrowseLinks ? el(
         'a',
         {
           className: 'button button-ghost button-icon project-detail__section-list-btn',
@@ -430,11 +434,11 @@ export async function renderProjectDetailPage(container, projectId) {
   );
 
   const mediaGrid = el('div', { className: 'projects-grid projects-grid--detail' });
-  if (canManageTasks) {
+  if (canManageTasks || roleName === 'Внешний подрядчик') {
     mediaGrid.append(buildSectionCreateCard(hrefMedia, 'Добавить медиа'));
   }
   if (media.length === 0) {
-    if (roleName === 'Клиент') {
+    if (hideGlobalBrowseLinks && roleName !== 'Внешний подрядчик') {
       mediaGrid.append(el('p', { className: 'project-detail__muted', textContent: 'Нет медиа.' }));
     }
   } else {
@@ -447,7 +451,7 @@ export async function renderProjectDetailPage(container, projectId) {
     el(
       'h2',
       { className: 'project-detail__section-title project-detail__section-title--tasks' },
-      roleName !== 'Клиент' ? el('a', {
+      !hideGlobalBrowseLinks ? el('a', {
         className: 'project-detail__section-heading',
         href: hrefMediaList,
         textContent: 'Мультимедиа',
@@ -455,7 +459,7 @@ export async function renderProjectDetailPage(container, projectId) {
         className: 'project-detail__section-heading',
         textContent: 'Мультимедиа',
       }),
-      roleName !== 'Клиент' ? el(
+      !hideGlobalBrowseLinks ? el(
         'a',
         {
           className: 'button button-ghost button-icon project-detail__section-list-btn',

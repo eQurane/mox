@@ -6,6 +6,7 @@ import path from 'path';
 import pool from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { storageDir } from '../paths.js';
+import { isExternalContractorAccountRole, sqlTaskHasContractorType } from '../access/contractorTaskScope.js';
 
 const router = express.Router();
 
@@ -69,6 +70,31 @@ async function requireManagerOrAdmin(res, userId) {
 /** Возвращает строку медиа с контекстом (проект / задача / коллекция) или null при отсутствии доступа. */
 async function fetchMediaRowById(id, userId, roleName) {
   const seeAll = ROLES_ALL_PROJECTS.has(roleName);
+  const contractorRestricted = isExternalContractorAccountRole(roleName);
+
+  let accessSql;
+  let params;
+  if (seeAll) {
+    accessSql = 'TRUE';
+    params = [id];
+  } else if (contractorRestricted) {
+    accessSql = `EXISTS (
+            SELECT 1 FROM user_project up
+            WHERE up.project_id = t.project_id
+              AND up.user_id = $2
+              AND up.excluded_at IS NULL
+          ) AND ${sqlTaskHasContractorType('t')}`;
+    params = [id, userId];
+  } else {
+    accessSql = `EXISTS (
+            SELECT 1 FROM user_project up
+            WHERE up.project_id = t.project_id
+              AND up.user_id = $2
+              AND up.excluded_at IS NULL
+          )`;
+    params = [id, userId];
+  }
+
   const r = await pool.query(
     `SELECT m.id, m.collection_id, m.path, m.name, m.format, m.description,
             m.upload_at, m.status_id,
@@ -80,17 +106,8 @@ async function fetchMediaRowById(id, userId, roleName) {
        JOIN projects p ON p.id = t.project_id
        JOIN statuses_media sm ON sm.id = m.status_id
       WHERE m.id = $1
-        AND (${
-          seeAll
-            ? 'TRUE'
-            : `EXISTS (
-            SELECT 1 FROM user_project up
-            WHERE up.project_id = t.project_id
-              AND up.user_id = $2
-              AND up.excluded_at IS NULL
-          )`
-        })`,
-    seeAll ? [id] : [id, userId],
+        AND (${accessSql})`,
+    params,
   );
   return r.rows[0] ?? null;
 }
@@ -143,11 +160,12 @@ router.get('/media', requireAuth, async (req, res) => {
     if (!roleName) {
       return res.status(401).json({ error: 'Пользователь не найден.' });
     }
-    if (roleName === 'Клиент' || roleName === 'Внешний подрядчик') {
+    if (roleName === 'Клиент') {
       return res.status(403).json({ error: 'Недостаточно прав.' });
     }
 
     const seeAll = ROLES_ALL_PROJECTS.has(roleName);
+    const contractorRestricted = isExternalContractorAccountRole(roleName);
 
     const qRaw = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     const projectIdRaw = req.query.projectId;
@@ -230,6 +248,10 @@ router.get('/media', requireAuth, async (req, res) => {
     if (!seeAll) {
       params.push(req.userId);
       p++;
+    }
+
+    if (contractorRestricted) {
+      conditions.push(sqlTaskHasContractorType('t'));
     }
 
     if (projectId !== null) {
@@ -357,10 +379,17 @@ router.post('/media', requireAuth, (req, res, next) => {
   }
 
   try {
-    const roleName = await requireManagerOrAdmin(res, req.userId);
+    const roleName = await fetchRoleNameByUserId(pool, req.userId);
     if (!roleName) {
       await removeSavedFile();
-      return;
+      return res.status(401).json({ error: 'Пользователь не найден.' });
+    }
+
+    const isManager = ROLES_ALL_PROJECTS.has(roleName);
+    const isContractor = isExternalContractorAccountRole(roleName);
+    if (!isManager && !isContractor) {
+      await removeSavedFile();
+      return res.status(403).json({ error: 'Недостаточно прав.' });
     }
 
     if (!req.file) {
@@ -397,6 +426,19 @@ router.post('/media', requireAuth, (req, res, next) => {
     if (!projectVisible) {
       await removeSavedFile();
       return res.status(404).json({ error: 'Коллекция не найдена.' });
+    }
+
+    if (isContractor) {
+      const taskCheck = await pool.query(
+        `SELECT 1 FROM collections c
+           JOIN tasks t ON t.id = c.task_id
+          WHERE c.id = $1 AND ${sqlTaskHasContractorType('t')}`,
+        [collectionId],
+      );
+      if (!taskCheck.rows.length) {
+        await removeSavedFile();
+        return res.status(404).json({ error: 'Коллекция не найдена.' });
+      }
     }
 
     const statusRes = await pool.query(`SELECT id FROM statuses_media WHERE name = $1 LIMIT 1`, [
@@ -487,7 +529,7 @@ router.get('/media/:id', requireAuth, async (req, res) => {
   try {
     const roleName = await fetchRoleNameByUserId(pool, req.userId);
     if (!roleName) return res.status(401).json({ error: 'Пользователь не найден.' });
-    if (roleName === 'Клиент' || roleName === 'Внешний подрядчик') {
+    if (roleName === 'Клиент') {
       return res.status(403).json({ error: 'Недостаточно прав.' });
     }
 

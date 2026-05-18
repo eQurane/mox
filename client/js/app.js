@@ -185,7 +185,11 @@ function route() {
     }
     if (segs[2] === 'media' && segs[3] === 'new' && segs.length === 4) {
       const mediaNewRole = getUserSnapshot()?.roleName;
-      if (mediaNewRole !== 'Админ' && mediaNewRole !== 'Менеджер') {
+      if (
+        mediaNewRole !== 'Админ'
+        && mediaNewRole !== 'Менеджер'
+        && mediaNewRole !== 'Внешний подрядчик'
+      ) {
         history.replaceState(null, '', '#/home');
         renderHomePage(appRoot);
         return;
@@ -232,7 +236,7 @@ function route() {
 
   if (segs[0] === 'media' && segs.length === 2 && /^\d+$/.test(segs[1])) {
     const roleName = getUserSnapshot()?.roleName;
-    if (roleName === 'Клиент' || roleName === 'Внешний подрядчик') {
+    if (roleName === 'Клиент') {
       history.replaceState(null, '', '#/home');
       renderHomePage(appRoot);
       return;

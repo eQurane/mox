@@ -249,7 +249,7 @@ export async function renderCollectionDetailPage(container, projectId, collectio
   );
 
   const mediaGrid = el('div', { className: 'projects-grid projects-grid--detail' });
-  if (roleName === 'Админ' || roleName === 'Менеджер') {
+  if (roleName === 'Админ' || roleName === 'Менеджер' || roleName === 'Внешний подрядчик') {
     mediaGrid.append(buildSectionCreateCard(hrefMediaNew, 'Добавить медиа'));
   }
   if (mediaList.length === 0 && (roleName === 'Клиент' || roleName === 'Исполнитель')) {
