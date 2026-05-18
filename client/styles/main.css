@@ -880,6 +880,10 @@ a.button {
   .project-detail__hero {
     grid-template-columns: minmax(200px, 340px) 1fr;
   }
+
+  .task-detail .project-detail__hero {
+    grid-template-columns: 1fr;
+  }
 }
 
 .project-detail__hero-media {
