@@ -1,0 +1,488 @@
+---
+description: Матрица доступа и система разграничения прав в проекте mox
+globs: server/src/**/*.js, client/js/**/*.js
+alwaysApply: false
+---
+
+# Матрица доступа mox
+
+Документация системы разграничения прав доступа в проекте mox.
+
+## Обзор системы ролей
+
+В системе определено **5 ролей пользователей**, каждая с различными уровнями доступа:
+
+### 1. Админ
+- **Назначение**: подтверждение учётных записей, администрирование системы
+- **Уровень доступа**: полный доступ ко всем проектам, задачам, коллекциям и медиа
+- **Особенности**: 
+  - Доступ к админ-панели (`#/admin`)
+  - Может назначать участников любых ролей в проекты, включая Менеджеров
+  - Видит все проекты без ограничений
+
+### 2. Менеджер
+- **Назначение**: создание проектов, назначение исполнителей и клиентов, управление задачами
+- **Уровень доступа**: полный доступ ко всем проектам, задачам, коллекциям и медиа
+- **Особенности**:
+  - Может создавать проекты и задачи
+  - Может назначать Исполнителей и Клиентов в проекты
+  - Получает уведомления о комментариях
+
+### 3. Исполнитель
+- **Назначение**: работа в определенных проектах
+- **Уровень доступа**: доступ только к проектам, в которых является участником
+- **Особенности**:
+  - Видит только проекты через таблицу `user_project` (где `excluded_at IS NULL`)
+  - Может редактировать медиа, комментировать
+  - Не может создавать проекты или задачи
+
+### 4. Внешний подрядчик
+- **Назначение**: исключительно загрузка медиафайлов
+- **Уровень доступа**: минимальный, без доступа к основным разделам
+- **Особенности**:
+  - Запрещён доступ к спискам проектов, задач, коллекций, медиа (`403`)
+  - Может быть назначен исполнителем техзадания (`tasks.role_id`)
+  - Ограниченный функционал
+
+### 5. Клиент
+- **Назначение**: просмотр определенных проектов, комментирование
+- **Уровень доступа**: только просмотр проектов через членство
+- **Особенности**:
+  - Видит только проекты через таблицу `user_project` (где `excluded_at IS NULL`)
+  - Запрещён доступ к спискам задач, коллекций, медиа (`403`)
+  - На странице проекта скрыты ссылки на добавление контента
+
+## Иерархия ролей
+
+```mermaid
+graph TD
+    Admin[Админ]
+    Manager[Менеджер]
+    Executor[Исполнитель]
+    Contractor[Внешний подрядчик]
+    Client[Клиент]
+    
+    Admin -->|Полный доступ| AllProjects[Все проекты]
+    Manager -->|Полный доступ| AllProjects
+    Executor -->|Членство| MemberProjects[Проекты-участник]
+    Client -->|Членство| MemberProjects
+    Contractor -->|Ограничено| Limited[Минимальный доступ]
+    
+    AllProjects --> CRUD[Создание/Чтение/Обновление/Удаление]
+    MemberProjects --> Read[Чтение + Комментарии]
+    Limited --> Upload[Только загрузка]
+```
+
+## Механизм авторизации
+
+### JWT токены
+
+1. **Регистрация/Логин**: 
+   - `POST /api/auth/register` — пользователь указывает `roleId` (в dev любую роль из БД)
+   - `POST /api/auth/login` — проверка email/пароль, статус должен быть "Активный"
+
+2. **Создание токена**:
+   ```javascript
+   const token = jwt.sign({ 
+     sub: String(userId), 
+     roleId: user.role_id 
+   }, jwtSecret, { expiresIn: JWT_EXPIRES_IN });
+   ```
+
+3. **Передача токена**:
+   - Клиент сохраняет токен в `sessionStorage` (`mox_token`)
+   - Каждый защищённый запрос: `Authorization: Bearer <token>`
+
+4. **Проверка на backend** (`middleware/auth.js`):
+   ```javascript
+   export function requireAuth(req, res, next) {
+     const raw = bearerToken(req);
+     if (!raw) return res.status(401).json({ error: 'Требуется авторизация.' });
+     
+     const payload = jwt.verify(raw, jwtSecret);
+     const userId = Number(payload.sub);
+     const roleId = Number(payload.roleId);
+     
+     req.userId = userId;
+     req.roleId = roleId;
+     next();
+   }
+   ```
+
+5. **Извлечение роли**:
+   - В route handlers роль пользователя извлекается из БД по `userId`:
+   ```javascript
+   const roleResult = await db.query(
+     `SELECT r.name AS role_name
+      FROM users u
+      JOIN roles r ON r.id = u.role_id
+      WHERE u.id = $1`,
+     [userId]
+   );
+   const roleName = roleResult.rows[0]?.role_name;
+   ```
+
+### Процесс проверки прав
+
+```mermaid
+sequenceDiagram
+    participant Client as Клиент
+    participant Middleware as requireAuth
+    participant RouteHandler as Route Handler
+    participant DB as PostgreSQL
+    participant UserProject as user_project
+    
+    Client->>Middleware: Request + Bearer Token
+    Middleware->>Middleware: jwt.verify(token)
+    Middleware->>Middleware: Извлечь userId, roleId
+    Middleware->>RouteHandler: req.userId, req.roleId
+    
+    RouteHandler->>DB: SELECT role_name FROM users JOIN roles
+    DB->>RouteHandler: roleName (Админ/Менеджер/и т.д.)
+    
+    alt Админ или Менеджер
+        RouteHandler->>Client: Полный доступ
+    else Исполнитель или Клиент
+        RouteHandler->>UserProject: Проверка членства (excluded_at IS NULL)
+        alt Активный участник
+            UserProject->>RouteHandler: Доступ разрешён
+            RouteHandler->>Client: 200 OK
+        else Не участник
+            UserProject->>RouteHandler: Нет членства
+            RouteHandler->>Client: 404 Not Found
+        end
+    else Внешний подрядчик
+        RouteHandler->>Client: 403 Forbidden
+    end
+```
+
+## Матрица доступа к API
+
+### Аутентификация
+
+| Эндпоинт | Метод | Админ | Менеджер | Исполнитель | Внешний подрядчик | Клиент | Примечания |
+|----------|-------|-------|----------|-------------|-------------------|--------|------------|
+| `/api/auth/register-options` | GET | ✅ | ✅ | ✅ | ✅ | ✅ | Список ролей для регистрации |
+| `/api/auth/register` | POST | ✅ | ✅ | ✅ | ✅ | ✅ | Создание учётной записи |
+| `/api/auth/login` | POST | ✅ | ✅ | ✅ | ✅ | ✅ | Вход, только статус "Активный" |
+| `/api/auth/me` | GET | ✅ | ✅ | ✅ | ✅ | ✅ | Текущий пользователь (Bearer) |
+
+### Проекты
+
+| Эндпоинт | Метод | Админ | Менеджер | Исполнитель | Внешний подрядчик | Клиент | Примечания |
+|----------|-------|-------|----------|-------------|-------------------|--------|------------|
+| `/api/projects` | GET | ✅ | ✅ | ⚠️ | ❌ | ⚠️ | Исполнитель/Клиент: только через `user_project` |
+| `/api/projects/:id` | GET | ✅ | ✅ | ⚠️ | ❌ | ⚠️ | Проверка членства для Исполнителя/Клиента |
+| `/api/projects/create-options` | GET | ✅ | ✅ | ❌ | ❌ | ❌ | Только Админ/Менеджер |
+| `/api/projects` | POST | ✅ | ✅ | ❌ | ❌ | ❌ | Создание + автодобавление в `user_project` |
+| `/api/projects/:id` | PATCH | ✅ | ✅ | ❌ | ❌ | ❌ | Обновление, проверка членства |
+
+### Задачи (ТЗ)
+
+| Эндпоинт | Метод | Админ | Менеджер | Исполнитель | Внешний подрядчик | Клиент | Примечания |
+|----------|-------|-------|----------|-------------|-------------------|--------|------------|
+| `/api/tasks` | GET | ✅ | ✅ | ⚠️ | ❌ | ❌ | Исполнитель: через `user_project` проектов |
+| `/api/tasks/:id` | GET | ✅ | ✅ | ⚠️ | ❌ | ⚠️ | Клиент: через членство проекта |
+| `/api/tasks/create-options` | GET | ✅ | ✅ | ❌ | ❌ | ❌ | Справочники для создания |
+| `/api/tasks` | POST | ✅ | ✅ | ❌ | ❌ | ❌ | Создание ТЗ |
+| `/api/tasks/:id` | PATCH | ✅ | ✅ | ❌ | ❌ | ❌ | Обновление ТЗ |
+
+### Коллекции
+
+| Эндпоинт | Метод | Админ | Менеджер | Исполнитель | Внешний подрядчик | Клиент | Примечания |
+|----------|-------|-------|----------|-------------|-------------------|--------|------------|
+| `/api/collections` | GET | ✅ | ✅ | ⚠️ | ❌ | ❌ | Исполнитель: через `user_project` |
+| `/api/collections/:id` | GET | ✅ | ✅ | ⚠️ | ❌ | ⚠️ | Клиент: через членство в проекте |
+| `/api/collections` | POST | ✅ | ✅ | ❌ | ❌ | ❌ | Создание коллекции |
+| `/api/collections/:id` | PATCH | ✅ | ✅ | ❌ | ❌ | ❌ | Обновление коллекции |
+
+### Медиа
+
+| Эндпоинт | Метод | Админ | Менеджер | Исполнитель | Внешний подрядчик | Клиент | Примечания |
+|----------|-------|-------|----------|-------------|-------------------|--------|------------|
+| `/api/media` | GET | ✅ | ✅ | ⚠️ | ❌ | ❌ | Исполнитель: через `user_project` |
+| `/api/media/:id` | GET | ✅ | ✅ | ⚠️ | ❌ | ❌ | Просмотр медиа |
+| `/api/media` | POST | ✅ | ✅ | ❌ | ❌ | ❌ | Загрузка (multipart/form-data) |
+| `/api/media/:id` | PATCH | ✅ | ✅ | ✅ | ❌ | ❌ | Редактирование описания |
+| `/api/media/:id` | DELETE | ✅ | ✅ | ✅ | ❌ | ❌ | Soft-delete (статус "Удалённый") |
+| `/api/media/:id/replace` | POST | ✅ | ✅ | ❌ | ❌ | ❌ | Замена файла, только Админ/Менеджер |
+
+### Комментарии
+
+| Эндпоинт | Метод | Админ | Менеджер | Исполнитель | Внешний подрядчик | Клиент | Примечания |
+|----------|-------|-------|----------|-------------|-------------------|--------|------------|
+| `/api/media/:mediaId/comments` | GET | ✅ | ✅ | ✅ | ❌ | ❌ | Просмотр комментариев |
+| `/api/media/:mediaId/comments` | POST | ✅ | ✅ | ✅ | ❌ | ❌ | Добавление комментария |
+
+### Уведомления
+
+| Эндпоинт | Метод | Админ | Менеджер | Исполнитель | Внешний подрядчик | Клиент | Примечания |
+|----------|-------|-------|----------|-------------|-------------------|--------|------------|
+| `/api/notifications` | GET | ✅ | ✅ | ❌ | ❌ | ❌ | Последние комментарии по проектам |
+
+## Матрица доступа к UI (Frontend)
+
+| Страница (hash) | Админ | Менеджер | Исполнитель | Внешний подрядчик | Клиент | Примечания |
+|-----------------|-------|----------|-------------|-------------------|--------|------------|
+| `#/login` | 👁️ | 👁️ | 👁️ | 👁️ | 👁️ | Редирект на `#/home` если залогинен |
+| `#/register` | 👁️ | 👁️ | 👁️ | 👁️ | 👁️ | Публичная страница |
+| `#/home` | ✅ | ✅ | ✅ | ⚠️ | ⚠️ | Список проектов; Клиент/Подрядчик: только членство |
+| `#/admin` | ✅ | ❌ | ❌ | ❌ | ❌ | Только для Админа |
+| `#/projects/new` | ✅ | ✅ | ❌ | ❌ | ❌ | Создание проекта |
+| `#/project/:id` | ✅ | ✅ | ⚠️ | ❌ | ⚠️ | Детали проекта, членство для Исполнителя/Клиента |
+| `#/project/:id/edit` | ✅ | ✅ | ❌ | ❌ | ❌ | Редактирование проекта |
+| `#/tasks` | ✅ | ✅ | ✅ | ❌ | ❌ | Список ТЗ с фильтрами |
+| `#/project/:id/tasks/new` | ✅ | ✅ | ❌ | ❌ | ❌ | Создание ТЗ |
+| `#/project/:id/tasks/:taskId` | ✅ | ✅ | ⚠️ | ❌ | ⚠️ | Детали ТЗ |
+| `#/project/:id/tasks/:taskId/edit` | ✅ | ✅ | ❌ | ❌ | ❌ | Редактирование ТЗ |
+| `#/collections` | ✅ | ✅ | ✅ | ❌ | ❌ | Список коллекций |
+| `#/project/:id/collections/new` | ✅ | ✅ | ❌ | ❌ | ❌ | Создание коллекции |
+| `#/project/:id/collections/:collectionId` | ✅ | ✅ | ⚠️ | ❌ | ⚠️ | Детали коллекции |
+| `#/project/:id/collections/:collectionId/edit` | ✅ | ✅ | ❌ | ❌ | ❌ | Редактирование коллекции |
+| `#/media` | ✅ | ✅ | ✅ | ❌ | ❌ | Список медиа с фильтрами |
+| `#/project/:id/media/new` | ✅ | ✅ | ❌ | ❌ | ❌ | Загрузка медиа |
+| `#/media/:id` | ✅ | ✅ | ✅ | ❌ | ❌ | Детали медиа с плеером и комментариями |
+
+### Элементы интерфейса
+
+**Вкладки навигации** (dashboardTabs.js):
+- **Админ**: Проекты, ТЗ, Коллекции, Медиа, Администрирование
+- **Менеджер**: Проекты, ТЗ, Коллекции, Медиа
+- **Исполнитель**: Проекты, ТЗ, Коллекции, Медиа
+- **Клиент**: только Проекты
+- **Внешний подрядчик**: нет вкладок
+
+**Колокольчик уведомлений** (notificationBell.js):
+- Только для **Админа** и **Менеджера**
+- Опрос `GET /api/notifications` каждые 30 секунд
+- Отслеживание прочитанных через `localStorage` (`mox_notifications_last_seen`)
+
+## Членство в проектах
+
+### Таблица user_project
+
+```sql
+CREATE TABLE user_project (
+  user_id INT NOT NULL REFERENCES users(id),
+  project_id INT NOT NULL REFERENCES projects(id),
+  included_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  excluded_at TIMESTAMP,
+  PRIMARY KEY (user_id, project_id)
+);
+```
+
+### Логика членства
+
+1. **Включение в проект**:
+   - При создании проекта (`POST /api/projects`): создатель автоматически добавляется
+   - Каждый пользователь из `participantIds` получает запись с `included_at = NOW()`, `excluded_at = NULL`
+
+2. **Активное членство**:
+   - Условие: `excluded_at IS NULL`
+   - Пользователь считается активным участником проекта
+
+3. **Исключение из проекта**:
+   - При обновлении проекта (`PATCH /api/projects/:id`): если пользователь не в новом `participantIds`, устанавливается `excluded_at = NOW()`
+   - Редактор проекта (`req.userId`) не может быть исключён
+
+4. **Проверка доступа**:
+   ```javascript
+   // Для ролей Исполнитель и Клиент
+   const memberCheck = await db.query(
+     `SELECT 1 FROM user_project
+      WHERE user_id = $1 AND project_id = $2 AND excluded_at IS NULL`,
+     [userId, projectId]
+   );
+   if (memberCheck.rowCount === 0) {
+     return res.status(404).json({ error: 'Проект не найден.' });
+   }
+   ```
+
+### Алгоритм определения доступа к проекту
+
+```mermaid
+flowchart TD
+    Start([Запрос к проекту]) --> Auth{Авторизован?}
+    Auth -->|Нет| Error401[401 Unauthorized]
+    Auth -->|Да| GetRole[Получить roleName из БД]
+    
+    GetRole --> CheckRole{Роль?}
+    
+    CheckRole -->|Админ| FullAccess[Полный доступ]
+    CheckRole -->|Менеджер| FullAccess
+    CheckRole -->|Внешний подрядчик| Error403[403 Forbidden]
+    
+    CheckRole -->|Исполнитель| CheckMembership{Членство?}
+    CheckRole -->|Клиент| CheckMembership
+    
+    CheckMembership --> QueryUserProject[SELECT FROM user_project<br/>WHERE excluded_at IS NULL]
+    QueryUserProject --> HasMembership{Найдена<br/>запись?}
+    
+    HasMembership -->|Да| LimitedAccess[Доступ разрешён]
+    HasMembership -->|Нет| Error404[404 Not Found]
+    
+    FullAccess --> Success[200 OK]
+    LimitedAccess --> Success
+```
+
+## Константы проверки ролей на Backend
+
+### ROLES_ALL_PROJECTS
+
+**Значение**: `new Set(['Админ', 'Менеджер'])`
+
+**Назначение**: роли с доступом ко всем проектам без проверки членства
+
+**Используется в**:
+- `server/src/routes/projects.js` — списки и детали проектов
+- `server/src/routes/tasks.js` — списки и детали задач
+- `server/src/routes/collections.js` — списки и детали коллекций
+- `server/src/routes/media.js` — списки и детали медиа
+- `server/src/routes/comments.js` — комментарии к медиа
+
+### ROLES_CAN_MODIFY
+
+**Значение**: `new Set(['Админ', 'Менеджер', 'Исполнитель'])`
+
+**Назначение**: роли, которые могут редактировать медиа (описание, удаление)
+
+**Используется в**:
+- `server/src/routes/media.js`:
+  - `PATCH /api/media/:id` — редактирование описания
+  - `DELETE /api/media/:id` — soft-delete медиа
+
+### ROLES_CAN_COMMENT
+
+**Значение**: `new Set(['Админ', 'Менеджер', 'Исполнитель'])`
+
+**Назначение**: роли, которые могут просматривать и добавлять комментарии
+
+**Используется в**:
+- `server/src/routes/comments.js`:
+  - `GET /api/media/:mediaId/comments` — список комментариев
+  - `POST /api/media/:mediaId/comments` — добавление комментария
+
+### ROLES_WITH_NOTIFICATIONS
+
+**Значение**: `new Set(['Админ', 'Менеджер'])`
+
+**Назначение**: роли с доступом к уведомлениям
+
+**Используется в**:
+- `server/src/routes/notifications.js`:
+  - `GET /api/notifications` — получение уведомлений
+
+### ASSIGNABLE_ROLE_NAMES
+
+**Значение**: 
+```javascript
+{
+  Админ: new Set(['Менеджер', 'Исполнитель', 'Клиент']),
+  Менеджер: new Set(['Исполнитель', 'Клиент'])
+}
+```
+
+**Назначение**: какие роли может назначать создатель проекта в качестве участников
+
+**Используется в**:
+- `server/src/routes/projects.js`:
+  - `GET /api/projects/create-options` — список доступных для выбора пользователей
+  - `POST /api/projects` — валидация `participantIds`
+  - `PATCH /api/projects/:id` — валидация обновления участников
+
+### TASK_ROLE_NAMES
+
+**Значение**: `['Исполнитель', 'Внешний подрядчик']`
+
+**Назначение**: роли, которые могут быть назначены исполнителями ТЗ (`tasks.role_id`)
+
+**Используется в**:
+- `server/src/routes/tasks.js`:
+  - `GET /api/tasks/create-options` — справочник ролей для ТЗ
+  - `POST /api/tasks` — валидация `roleId`
+  - `PATCH /api/tasks/:id` — валидация `roleId`
+
+## HTTP коды ответов
+
+| Код | Значение | Когда возвращается |
+|-----|----------|-------------------|
+| `200` | OK | Успешная операция |
+| `201` | Created | Успешное создание ресурса |
+| `400` | Bad Request | Ошибка валидации входных данных |
+| `401` | Unauthorized | Нет токена или токен недействителен |
+| `403` | Forbidden | Токен валиден, но у пользователя нет прав на операцию |
+| `404` | Not Found | Ресурс не найден ИЛИ нет прав доступа (для безопасности) |
+| `500` | Internal Server Error | Ошибка сервера или БД |
+
+**Важно**: Для защиты от утечки информации, когда пользователь не имеет прав видеть ресурс (например, Исполнитель запрашивает чужой проект), возвращается `404` вместо `403`, чтобы не раскрывать факт существования ресурса.
+
+## Проверка на клиенте
+
+Клиент использует снимок пользователя из `sessionStorage`:
+
+```javascript
+import { getUserSnapshot } from './auth/session.js';
+
+const user = getUserSnapshot();
+// { id, name, email, roleId, roleName }
+
+if (user?.roleName === 'Админ') {
+  // показать админ-панель
+}
+
+if (['Админ', 'Менеджер'].includes(user?.roleName)) {
+  // показать кнопку создания
+}
+```
+
+**Примеры проверок в роутере** (`client/js/app.js`):
+
+```javascript
+// Только Админ
+if (segs[0] === 'admin' && segs.length === 1) {
+  if (getUserSnapshot()?.roleName !== 'Админ') {
+    history.replaceState(null, '', '#/home');
+    renderHomePage(appRoot);
+    return;
+  }
+  renderAdminPage(appRoot);
+  return;
+}
+
+// Только Админ и Менеджер
+if (segs[0] === 'projects' && segs[1] === 'new') {
+  const role = getUserSnapshot()?.roleName;
+  if (!['Админ', 'Менеджер'].includes(role)) {
+    history.replaceState(null, '', '#/home');
+    renderHomePage(appRoot);
+    return;
+  }
+  renderProjectNewPage(appRoot);
+  return;
+}
+
+// Недоступно для Клиента и Внешнего подрядчика
+if (segs[0] === 'tasks' && segs.length === 1) {
+  const role = getUserSnapshot()?.roleName;
+  if (['Клиент', 'Внешний подрядчик'].includes(role)) {
+    history.replaceState(null, '', '#/home');
+    renderHomePage(appRoot);
+    return;
+  }
+  renderTasksListPage(appRoot, searchParams);
+  return;
+}
+```
+
+## Резюме
+
+Система разграничения прав в проекте mox основана на:
+
+1. **JWT токены** с `roleId` для аутентификации
+2. **5 предопределённых ролей** в таблице `roles`
+3. **Наборы разрешённых ролей** (константы `ROLES_*`) для проверок на backend
+4. **Таблица `user_project`** для управления членством в проектах
+5. **Проверки на frontend** через `getUserSnapshot().roleName` для скрытия недоступных элементов UI
+6. **HTTP коды**: `401` (не авторизован), `403` (нет прав), `404` (не найдено или нет доступа)
+
+Все проверки прав выполняются как на backend (авторитетно), так и на frontend (для UX).
