@@ -174,7 +174,11 @@ export async function renderMediaDetailPage(container, mediaId) {
     data = await fetchMediaById(mediaId);
   } catch (err) {
     loading.remove();
-    const contractorErr = getUserSnapshot()?.roleName === 'Внешний подрядчик';
+    const roleNameErr = getUserSnapshot()?.roleName;
+    const contractorErr = roleNameErr === 'Внешний подрядчик';
+    const clientErr = roleNameErr === 'Клиент';
+    const errHref = contractorErr || clientErr ? '#/home' : '#/media';
+    const errLabel = contractorErr || clientErr ? 'К проектам' : 'К списку медиа';
     main.append(
       el(
         'div',
@@ -186,8 +190,8 @@ export async function renderMediaDetailPage(container, mediaId) {
         }),
         el('a', {
           className: 'button primary project-detail__back-link',
-          href: contractorErr ? '#/home' : '#/media',
-          textContent: contractorErr ? 'К проектам' : 'К списку медиа',
+          href: errHref,
+          textContent: errLabel,
         }),
       ),
     );
@@ -200,18 +204,20 @@ export async function renderMediaDetailPage(container, mediaId) {
   const user = getUserSnapshot() || {};
   const roleName = user.roleName;
   const isContractorViewer = roleName === 'Внешний подрядчик';
+  const isClientViewer = roleName === 'Клиент';
   const canEditDescription =
     ['Админ', 'Менеджер', 'Исполнитель'].includes(roleName) && !isContractorViewer;
   const canReplace = ['Админ', 'Менеджер'].includes(roleName);
   const canDelete = ['Админ', 'Менеджер', 'Исполнитель'].includes(roleName) && !isContractorViewer;
-  const canComment = ['Админ', 'Менеджер', 'Исполнитель'].includes(roleName) && !isContractorViewer;
+  const canComment =
+    ['Админ', 'Менеджер', 'Исполнитель', 'Клиент'].includes(roleName) && !isContractorViewer;
 
-  if (isContractorViewer) {
+  if (isContractorViewer || isClientViewer) {
     backBtn.title = 'К проекту';
     backBtn.setAttribute('aria-label', 'К проекту');
   }
   backBtn.addEventListener('click', () => {
-    if (isContractorViewer) {
+    if (isContractorViewer || isClientViewer) {
       location.hash =
         media.projectId != null
           ? `#/project/${encodeURIComponent(String(media.projectId))}`

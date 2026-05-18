@@ -5,7 +5,7 @@ import { requireAuth } from '../middleware/auth.js';
 const router = express.Router();
 
 const ROLES_ALL_PROJECTS = new Set(['Админ', 'Менеджер']);
-const ROLES_CAN_COMMENT = new Set(['Админ', 'Менеджер', 'Исполнитель']);
+const ROLES_CAN_COMMENT = new Set(['Админ', 'Менеджер', 'Исполнитель', 'Клиент']);
 
 async function fetchRoleNameByUserId(userId) {
   const r = await pool.query(
@@ -47,7 +47,7 @@ router.get('/media/:mediaId/comments', requireAuth, async (req, res) => {
   try {
     const roleName = await fetchRoleNameByUserId(req.userId);
     if (!roleName) return res.status(401).json({ error: 'Пользователь не найден.' });
-    if (roleName === 'Клиент' || roleName === 'Внешний подрядчик') {
+    if (roleName === 'Внешний подрядчик') {
       return res.status(403).json({ error: 'Недостаточно прав.' });
     }
 

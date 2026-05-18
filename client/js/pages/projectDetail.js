@@ -185,6 +185,7 @@ export async function renderProjectDetailPage(container, projectId) {
   const canManageTasks = roleName === 'Админ' || roleName === 'Менеджер';
   const hideGlobalBrowseLinks =
     roleName === 'Клиент' || roleName === 'Внешний подрядчик';
+  const showMediaBrowseLinks = !hideGlobalBrowseLinks || roleName === 'Клиент';
   const hideNewCollectionControls = roleName === 'Клиент';
 
   const taskById = new Map(tasks.map((t) => [t.id, t]));
@@ -454,7 +455,7 @@ export async function renderProjectDetailPage(container, projectId) {
     el(
       'h2',
       { className: 'project-detail__section-title project-detail__section-title--tasks' },
-      !hideGlobalBrowseLinks ? el('a', {
+      showMediaBrowseLinks ? el('a', {
         className: 'project-detail__section-heading',
         href: hrefMediaList,
         textContent: 'Мультимедиа',
@@ -462,7 +463,7 @@ export async function renderProjectDetailPage(container, projectId) {
         className: 'project-detail__section-heading',
         textContent: 'Мультимедиа',
       }),
-      !hideGlobalBrowseLinks ? el(
+      showMediaBrowseLinks ? el(
         'a',
         {
           className: 'button button-ghost button-icon project-detail__section-list-btn',

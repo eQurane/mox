@@ -1,12 +1,17 @@
 /** @param {'home' | 'tasks' | 'collections' | 'media' | 'admin'} active */
 export function appendDashboardSectionTabs(nav, { active, roleName, isAdmin }) {
   nav.append(elTab('Проекты', '#/home', active === 'home'));
-  if (roleName !== 'Клиент' && roleName !== 'Внешний подрядчик') {
+  const showTasksCollections =
+    roleName !== 'Клиент' && roleName !== 'Внешний подрядчик';
+  const showMediaTab = roleName !== 'Внешний подрядчик';
+  if (showTasksCollections) {
     nav.append(
       elTab('ТЗ', '#/tasks', active === 'tasks'),
       elTab('Коллекции', '#/collections', active === 'collections'),
-      elTab('Медиа', '#/media', active === 'media'),
     );
+  }
+  if (showMediaTab) {
+    nav.append(elTab('Медиа', '#/media', active === 'media'));
   }
   if (isAdmin || roleName === 'Админ') {
     nav.append(elTab('Администрирование', '#/admin', active === 'admin'));

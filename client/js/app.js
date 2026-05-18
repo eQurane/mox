@@ -246,19 +246,13 @@ function route() {
   }
 
   if (segs[0] === 'media' && segs.length === 2 && /^\d+$/.test(segs[1])) {
-    const roleName = getUserSnapshot()?.roleName;
-    if (roleName === 'Клиент') {
-      history.replaceState(null, '', '#/home');
-      renderHomePage(appRoot);
-      return;
-    }
     renderMediaDetailPage(appRoot, segs[1]);
     return;
   }
 
   if (segs[0] === 'media' && segs.length === 1) {
     const roleName = getUserSnapshot()?.roleName;
-    if (roleName === 'Клиент' || roleName === 'Внешний подрядчик') {
+    if (roleName === 'Внешний подрядчик') {
       history.replaceState(null, '', '#/home');
       renderHomePage(appRoot);
       return;
