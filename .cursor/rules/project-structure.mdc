@@ -9,15 +9,15 @@ alwaysApply: true
 
 ## Серверная часть (`server/`)
 
-- `src/server.js` — точка входа (Express, статика `client/`, раздача загрузок **`/storage`** из каталога **`storage/`** в корне репозитория, монтирование `/api`).
-- `src/paths.js` — абсолютный путь к каталогу **`storage/`** для сохранения медиа.
+- `src/server.js` — точка входа (Express, статика `client/`, раздача загрузок **`/storage`** из каталога **`server/storage/`**, монтирование `/api`).
+- `src/paths.js` — абсолютный путь к каталогу **`server/storage/`** для сохранения медиа.
 - `src/db.js` — пул PostgreSQL (`pg`).
 - `src/jwtSecret.js` — секрет и срок жизни JWT (`JWT_SECRET`, `JWT_EXPIRES_IN`).
 - `src/middleware/auth.js` — `Bearer`-токен, `requireAuth`.
 - `src/middleware/requireAdmin.js` — после `requireAuth` доступ только роли **«Админ»**.
 - `src/routes/health.js` — health и проверка БД.
 - `src/routes/auth.js` — регистрация, логин, JWT, `/auth/me`; стартовый статус регистрации из **`REGISTER_USER_STATUS`** (см. `server/.env.example`).
-- `src/routes/admin.js` — админ-API: пользователи, обзор, проблемы, крупные файлы в `storage/`, жёсткое удаление медиа.
+- `src/routes/admin.js` — админ-API: пользователи, обзор, проблемы, крупные файлы в `server/storage/`, жёсткое удаление медиа.
 - `src/routes/projects.js` — список проектов, карточка (`GET /:id`), опции формы (`GET …/create-options`), создание (`POST`) и обновление (`PATCH /:id`, в т.ч. `user_project`).
 - `src/routes/tasks.js` — список заданий (`GET /tasks`), карточка (`GET /tasks/:id`), опции формы, создание и обновление (`GET …/create-options`, `POST /tasks`, `PATCH /tasks/:id`).
 - `src/routes/collections.js` — список коллекций с фильтрами (`GET /collections`), карточка с медиа (`GET /collections/:id`), создание (`POST /collections`) и обновление (`PATCH /collections/:id`).

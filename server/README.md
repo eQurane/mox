@@ -27,6 +27,10 @@ Node.js and Express.js backend with PostgreSQL support.
      npm start
      ```
 
+## Media storage
+
+Uploaded files are stored in `server/storage/` and served at `/storage/<filename>` (see `src/paths.js`).
+
 ## API Endpoints
 
 - `GET /api/health` - Health check endpoint

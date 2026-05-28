@@ -22,7 +22,7 @@ alwaysApply: false
 - **`projects`** — `name`, `goal`, `start_date`, `end_date`, `status_id` → `statuses_projects`. CHECK `start_date >= INIT_DATE`, `end_date > start_date`.
 - **`tasks`** — `name`, `description`, `deadline`; `role_id` → `roles`, `project_id` → `projects`, `status_id` → `statuses_tasks`. CHECK `deadline >= INIT_DATE`.
 - **`collections`** — `name`, `description`, `created_at`, `last_edited_at`, `task_id` → `tasks`. CHECK на `INIT_DATE` и `last_edited_at >= created_at`.
-- **`media`** — `path`, `name`, `format`, `description`, `upload_at`; `status_id` → `statuses_media`, `collection_id` → `collections`. Размер файла на диске в таблице **не хранится**; отчёты по крупным файлам строятся по каталогу **`storage/`** (см. `GET /api/admin/storage/large-files`).
+- **`media`** — `path`, `name`, `format`, `description`, `upload_at`; `status_id` → `statuses_media`, `collection_id` → `collections`. Размер файла на диске в таблице **не хранится**; отчёты по крупным файлам строятся по каталогу **`server/storage/`** (см. `GET /api/admin/storage/large-files`).
 - **`comments`** — `text`, `created_at`; `user_id` → `users`, `media_id` → `media`.
 - **`user_project`** — `user_id` → `users`, `project_id` → `projects`, `included_at`, `excluded_at` (nullable). При **`POST /api/projects`** в одной транзакции создаётся запись для **создателя** проекта и для каждого переданного участника (не дублируя `user_id` создателя).
 

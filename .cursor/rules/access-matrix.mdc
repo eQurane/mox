@@ -241,7 +241,7 @@ sequenceDiagram
 | `/api/admin/users/:id` | DELETE | ✅ | ❌ | ❌ | ❌ | ❌ | Только «На подтверждении», без `user_project` и `comments` |
 | `/api/admin/overview` | GET | ✅ | ❌ | ❌ | ❌ | ❌ | Сводка по БД |
 | `/api/admin/issues` | GET | ✅ | ❌ | ❌ | ❌ | ❌ | Проблемные места |
-| `/api/admin/storage/large-files` | GET | ✅ | ❌ | ❌ | ❌ | ❌ | Файлы в `storage/` > 50 МБ |
+| `/api/admin/storage/large-files` | GET | ✅ | ❌ | ❌ | ❌ | ❌ | Файлы в `server/storage/` > 50 МБ |
 | `/api/admin/media/:id` | DELETE | ✅ | ❌ | ❌ | ❌ | ❌ | Жёсткое удаление медиа и файла |
 
 ## Матрица доступа к UI (Frontend)

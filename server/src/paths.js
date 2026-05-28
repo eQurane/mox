@@ -3,7 +3,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const repoRoot = path.join(__dirname, '..', '..');
+const serverRoot = path.join(__dirname, '..');
 
-/** Каталог для загружаемых медиа: `<корень репозитория>/storage`. */
-export const storageDir = path.join(repoRoot, 'storage');
+/** Каталог для загружаемых медиа: `<server>/storage`. */
+export const storageDir = path.join(serverRoot, 'storage');

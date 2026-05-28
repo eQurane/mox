@@ -36,7 +36,7 @@
 | Бэкенд | Node.js, Express.js |
 | База данных | PostgreSQL (`pg`, connection pool) |
 | Аутентификация | JWT (`jsonwebtoken`), хэширование паролей `bcryptjs` |
-| Хранение файлов | Файловая система (`storage/` в корне репозитория) |
+| Хранение файлов | Файловая система (`server/storage/`) |
 | Разработка | `nodemon`, `dotenv`, `cors` |
 
 ---
@@ -71,7 +71,7 @@ graph TD
         Tables["users, projects, tasks,\ncollections, media, comments"]
     end
 
-    Storage["💾 storage/\nмедиафайлы на диске"]
+    Storage["💾 server/storage/\nмедиафайлы на диске"]
 
     ApiLayer -- "REST /api\nAuthorization: Bearer JWT" --> ServerJS
     ServerJS -- "статика client/" --> HTML
@@ -99,10 +99,10 @@ server/
 ├── src/
 │   ├── server.js             ← точка входа: Express-приложение
 │   │                           раздаёт client/ как статику,
-│   │                           storage/ по пути /storage,
+│   │                           server/storage/ по пути /storage,
 │   │                           монтирует роутеры на /api
 │   ├── db.js                 ← пул подключений PostgreSQL (pg.Pool)
-│   ├── paths.js              ← абсолютный путь к storage/
+│   ├── paths.js              ← абсолютный путь к server/storage/
 │   ├── jwtSecret.js          ← JWT_SECRET и JWT_EXPIRES_IN из env
 │   ├── access/
 │   │   └── contractorTaskScope.js  ← фильтрация цепочек заданий для «Внешнего подрядчика»
@@ -505,7 +505,7 @@ graph LR
 | DELETE | `/api/admin/users/:id` | Удалить учётную запись (ограничения на сервере) | Bearer, только Админ |
 | GET | `/api/admin/overview` | Сводка по БД | Bearer, только Админ |
 | GET | `/api/admin/issues` | Проблемные данные (проекты без участников и т.д.) | Bearer, только Админ |
-| GET | `/api/admin/storage/large-files` | Файлы в `storage/` больше 50 МБ | Bearer, только Админ |
+| GET | `/api/admin/storage/large-files` | Файлы в `server/storage/` больше 50 МБ | Bearer, только Админ |
 | DELETE | `/api/admin/media/:id` | Жёсткое удаление медиа и файла на диске | Bearer, только Админ |
 
 ---

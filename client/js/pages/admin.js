@@ -631,7 +631,7 @@ export function renderAdminPage(container, searchParams = new URLSearchParams())
         el(
           'p',
           { className: 'register-muted' },
-          'Файлы в каталоге storage больше 50 МБ. Строки без привязки к БД помечены как «Нет в БД».',
+          'Файлы в каталоге server/storage больше 50 МБ. Строки без привязки к БД помечены как «Нет в БД».',
         ),
       );
       const btn = el('button', { type: 'button', className: 'button', textContent: 'Обновить список' });
