@@ -279,7 +279,7 @@ export async function renderMediaDetailPage(container, mediaId) {
     ),
   );
 
-  // Ссылки на проект / ТЗ / коллекцию
+  // Ссылки на проект / задание / коллекцию
   const linksBlock = el('div', { className: 'media-detail__links' });
   if (media.projectId != null) {
     linksBlock.append(
@@ -299,7 +299,7 @@ export async function renderMediaDetailPage(container, mediaId) {
       el(
         'p',
         { className: 'media-detail__link-row' },
-        el('span', { className: 'media-detail__link-label', textContent: 'ТЗ: ' }),
+        el('span', { className: 'media-detail__link-label', textContent: 'Задание: ' }),
         el('a', {
           href: `#/project/${encodeURIComponent(String(media.projectId))}/tasks/${encodeURIComponent(String(media.taskId))}`,
           textContent: media.taskName ?? '—',

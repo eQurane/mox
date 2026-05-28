@@ -7,7 +7,7 @@ const router = express.Router();
 
 const ROLES_ALL_PROJECTS = new Set(['Админ', 'Менеджер']);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-/** Роли, допустимые в `tasks.role_id` при создании ТЗ (тип исполнителя). */
+/** Роли, допустимые в `tasks.role_id` при создании задания (тип исполнителя). */
 const TASK_ROLE_NAMES = ['Исполнитель', 'Внешний подрядчик'];
 
 const initDateFloor = () => process.env.INIT_DATE || '2026-05-01';
@@ -68,7 +68,7 @@ async function fetchProjectDatesIfVisible(projectId, userId, roleName) {
 }
 
 /**
- * Парсинг и валидация полей ТЗ для POST и PATCH.
+ * Парсинг и валидация полей задания для POST и PATCH.
  * @returns {Promise<{ ok: true, name: string, description: string, deadlineForDb: Date, statusId: number, taskRoleId: number, taskRoleRow: { name: string }, statusRow: { name: string } } | { ok: false, status: number, error: string }>}
  */
 async function validateTaskWriteFields(body, projectStartDate, projectEndDate) {
@@ -79,7 +79,7 @@ async function validateTaskWriteFields(body, projectStartDate, projectEndDate) {
   const taskRoleId = Number(body.roleId);
 
   if (!name) {
-    return { ok: false, status: 400, error: 'Укажите название технического задания.' };
+    return { ok: false, status: 400, error: 'Укажите название задания.' };
   }
 
   if (!deadlineRaw) {
@@ -102,11 +102,11 @@ async function validateTaskWriteFields(body, projectStartDate, projectEndDate) {
   }
 
   if (!Number.isInteger(statusId) || statusId < 1) {
-    return { ok: false, status: 400, error: 'Укажите статус технического задания из списка.' };
+    return { ok: false, status: 400, error: 'Укажите статус задания из списка.' };
   }
 
   if (!Number.isInteger(taskRoleId) || taskRoleId < 1) {
-    return { ok: false, status: 400, error: 'Укажите роль исполнителя ТЗ из списка.' };
+    return { ok: false, status: 400, error: 'Укажите роль исполнителя задания из списка.' };
   }
 
   const deadlineDayUtc = deadlineForDb.toISOString().slice(0, 10);
@@ -129,13 +129,13 @@ async function validateTaskWriteFields(body, projectStartDate, projectEndDate) {
   );
   const taskRoleRow = roleCheck.rows[0];
   if (!taskRoleRow) {
-    return { ok: false, status: 400, error: 'Выберите корректную роль исполнителя ТЗ.' };
+    return { ok: false, status: 400, error: 'Выберите корректную роль исполнителя задания.' };
   }
 
   const stCheck = await pool.query(`SELECT id, name FROM statuses_tasks WHERE id = $1`, [statusId]);
   const statusRow = stCheck.rows[0];
   if (!statusRow) {
-    return { ok: false, status: 400, error: 'Выберите корректный статус технического задания.' };
+    return { ok: false, status: 400, error: 'Выберите корректный статус задания.' };
   }
 
   return {
@@ -234,7 +234,7 @@ router.post('/tasks', requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Не удалось создать техническое задание.' });
+    res.status(500).json({ error: 'Не удалось создать задание.' });
   }
 });
 
@@ -411,7 +411,7 @@ router.get('/tasks/:id', requireAuth, async (req, res) => {
     const rawId = req.params.id;
     const taskId = Number(rawId);
     if (!Number.isInteger(taskId) || taskId < 1) {
-      return res.status(400).json({ error: 'Некорректный идентификатор технического задания.' });
+      return res.status(400).json({ error: 'Некорректный идентификатор задания.' });
     }
 
     const roleName = await fetchRoleNameByUserId(pool, req.userId);
@@ -452,7 +452,7 @@ router.get('/tasks/:id', requireAuth, async (req, res) => {
     const taskResult = await pool.query(taskSql, [taskId, seeAll, req.userId]);
     const trow = taskResult.rows[0];
     if (!trow) {
-      return res.status(404).json({ error: 'Техническое задание не найдено.' });
+      return res.status(404).json({ error: 'Задание не найдено.' });
     }
 
     const task = {
@@ -529,7 +529,7 @@ router.get('/tasks/:id', requireAuth, async (req, res) => {
     res.json({ task, collections, media });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Не удалось загрузить техническое задание.' });
+    res.status(500).json({ error: 'Не удалось загрузить задание.' });
   }
 });
 
@@ -541,18 +541,18 @@ router.patch('/tasks/:id', requireAuth, async (req, res) => {
     const rawId = req.params.id;
     const taskId = Number(rawId);
     if (!Number.isInteger(taskId) || taskId < 1) {
-      return res.status(400).json({ error: 'Некорректный идентификатор технического задания.' });
+      return res.status(400).json({ error: 'Некорректный идентификатор задания.' });
     }
 
     const existing = await pool.query(`SELECT project_id FROM tasks WHERE id = $1`, [taskId]);
     const projectId = existing.rows[0]?.project_id;
     if (projectId == null) {
-      return res.status(404).json({ error: 'Техническое задание не найдено.' });
+      return res.status(404).json({ error: 'Задание не найдено.' });
     }
 
     const project = await fetchProjectDatesIfVisible(projectId, req.userId, roleName);
     if (!project) {
-      return res.status(404).json({ error: 'Техническое задание не найдено.' });
+      return res.status(404).json({ error: 'Задание не найдено.' });
     }
 
     const validated = await validateTaskWriteFields(req.body ?? {}, project.startDate, project.endDate);
@@ -598,7 +598,7 @@ router.patch('/tasks/:id', requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Не удалось сохранить техническое задание.' });
+    res.status(500).json({ error: 'Не удалось сохранить задание.' });
   }
 });
 

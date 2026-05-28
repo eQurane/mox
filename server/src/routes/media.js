@@ -185,7 +185,7 @@ router.get('/media', requireAuth, async (req, res) => {
     if (taskIdRaw !== undefined && taskIdRaw !== '') {
       const n = Number(taskIdRaw);
       if (!Number.isInteger(n) || n < 1) {
-        return res.status(400).json({ error: 'Некорректный идентификатор технического задания.' });
+        return res.status(400).json({ error: 'Некорректный идентификатор задания.' });
       }
       taskId = n;
     }

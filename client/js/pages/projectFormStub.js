@@ -30,7 +30,7 @@ function el(tag, attrs = {}, ...children) {
 
 const COPY = {
   'tasks-new': {
-    title: 'Новое техническое задание',
+    title: 'Новое задание',
     lead: 'Форма появится в следующей версии.',
   },
   'collections-new': {
@@ -38,13 +38,13 @@ const COPY = {
     lead: 'Форма появится в следующей версии.',
   },
   'task-detail': {
-    title: 'Техническое задание',
-    lead: 'Карточка ТЗ будет доступна позже.',
+    title: 'Задание',
+    lead: 'Карточка задания будет доступна позже.',
   },
 };
 
 /**
- * Заглушка будущих форм (ТЗ, коллекции).
+ * Заглушка будущих форм (задания, коллекции).
  * @param {HTMLElement} container
  * @param {{ projectId: string, variant: keyof COPY }} options
  */

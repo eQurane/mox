@@ -1,4 +1,4 @@
-/** Имя роли типа исполнителя ТЗ для внешнего подрядчика (= `roles.name`, join по `tasks.role_id`). */
+/** Имя роли типа исполнителя задания для внешнего подрядчика (= `roles.name`, join по `tasks.role_id`). */
 export const CONTRACTOR_TASK_ROLE_NAME = 'Внешний подрядчик';
 
 /** Короткий алиас для проверки на стороне Node (без JOIN). */
@@ -7,7 +7,7 @@ export function isExternalContractorAccountRole(roleName) {
 }
 
 /**
- * Фрагмент SQL: задача принадлежит «области» подрядчика по типу ТЗ.
+ * Фрагмент SQL: задача принадлежит «области» подрядчика по типу задания.
  * @param {'t'|'t2'} taskAlias алиас таблицы `tasks` во внешнем запросе
  */
 export function sqlTaskHasContractorType(taskAlias) {

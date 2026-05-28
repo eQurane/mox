@@ -279,7 +279,7 @@ export async function renderProjectDetailPage(container, projectId) {
       el('p', { className: 'project-card__goal', textContent: col.description || '—' }),
       el('p', {
         className: 'project-card__muted',
-        textContent: `ТЗ: ${taskTitle}`,
+        textContent: `Задание: ${taskTitle}`,
       }),
       el('p', {
         className: 'project-card__dates',
@@ -315,7 +315,7 @@ export async function renderProjectDetailPage(container, projectId) {
       el('h2', { className: 'project-card__title', textContent: item.name ?? '' }),
       el('p', {
         className: 'project-card__muted',
-        textContent: `${collectionTitle} · ТЗ: ${taskTitle}`,
+        textContent: `${collectionTitle} · Задание: ${taskTitle}`,
       }),
       el('p', {
         className: 'project-card__dates',
@@ -350,18 +350,18 @@ export async function renderProjectDetailPage(container, projectId) {
       !hideGlobalBrowseLinks ? el('a', {
         className: 'project-detail__section-heading',
         href: hrefTasksList,
-        textContent: 'Технические задания',
+        textContent: 'Задания',
       }) : el('span', {
         className: 'project-detail__section-heading',
-        textContent: 'Технические задания',
+        textContent: 'Задания',
       }),
       !hideGlobalBrowseLinks ? el(
         'a',
         {
           className: 'button button-ghost button-icon project-detail__section-list-btn',
           href: hrefTasksList,
-          'aria-label': 'Список всех технических заданий проекта',
-          title: 'Список технических заданий',
+          'aria-label': 'Список всех заданий проекта',
+          title: 'Список заданий',
         },
         el('img', {
           className: 'header-toolbar__icon',
@@ -377,11 +377,11 @@ export async function renderProjectDetailPage(container, projectId) {
 
   const tasksGrid = el('div', { className: 'projects-grid projects-grid--detail' });
   if (canManageTasks) {
-    tasksGrid.append(buildSectionCreateCard(hrefTasksNew, 'Добавить ТЗ'));
+    tasksGrid.append(buildSectionCreateCard(hrefTasksNew, 'Добавить задание'));
   }
   if (tasks.length === 0) {
     if (!canManageTasks) {
-      tasksGrid.append(el('p', { className: 'project-detail__muted', textContent: 'Нет технических заданий.' }));
+      tasksGrid.append(el('p', { className: 'project-detail__muted', textContent: 'Нет заданий.' }));
     }
   } else {
     tasks.forEach((t) => tasksGrid.append(buildTaskCard(t)));

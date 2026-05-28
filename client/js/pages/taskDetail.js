@@ -93,7 +93,7 @@ export async function renderTaskDetailPage(container, projectId, taskId) {
     {
       type: 'button',
       className: 'button button-ghost button-icon',
-      'aria-label': 'Редактировать ТЗ',
+      'aria-label': 'Редактировать задание',
       title: 'Редактировать',
       hidden: true,
     },
@@ -109,7 +109,7 @@ export async function renderTaskDetailPage(container, projectId, taskId) {
 
   toolbarStart.append(
     backBtn,
-    el('h1', { className: 'project-detail__page-title', textContent: 'Техническое задание' }),
+    el('h1', { className: 'project-detail__page-title', textContent: 'Задание' }),
   );
   toolbar.append(toolbarStart, editBtn);
 
@@ -125,7 +125,7 @@ export async function renderTaskDetailPage(container, projectId, taskId) {
     const errP = el('p', {
       className: 'message message_error',
       role: 'alert',
-      textContent: err.message || 'Не удалось загрузить техническое задание.',
+      textContent: err.message || 'Не удалось загрузить задание.',
     });
     const backLink = el('a', {
       className: 'button primary project-detail__back-link',
@@ -163,7 +163,7 @@ export async function renderTaskDetailPage(container, projectId, taskId) {
         {
           className: 'message message_error',
           role: 'alert',
-          textContent: 'Это техническое задание относится к другому проекту.',
+          textContent: 'Это задание относится к другому проекту.',
         },
       )),
       el('a', {
@@ -318,7 +318,7 @@ export async function renderTaskDetailPage(container, projectId, taskId) {
         {
           className: 'button button-ghost button-icon project-detail__section-list-btn',
           href: hrefCollectionsList,
-          'aria-label': 'Список коллекций по этому техническому заданию',
+          'aria-label': 'Список коллекций по этому заданию',
           title: 'Список коллекций',
         },
         el('img', {
@@ -364,7 +364,7 @@ export async function renderTaskDetailPage(container, projectId, taskId) {
         {
           className: 'button button-ghost button-icon project-detail__section-list-btn',
           href: hrefMediaList,
-          'aria-label': 'Список медиа по этому техническому заданию',
+          'aria-label': 'Список медиа по этому заданию',
           title: 'Список медиа',
         },
         el('img', {

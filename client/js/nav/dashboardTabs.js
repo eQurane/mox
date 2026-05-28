@@ -6,7 +6,7 @@ export function appendDashboardSectionTabs(nav, { active, roleName, isAdmin }) {
   const showMediaTab = roleName !== 'Внешний подрядчик';
   if (showTasksCollections) {
     nav.append(
-      elTab('ТЗ', '#/tasks', active === 'tasks'),
+      elTab('Задания', '#/tasks', active === 'tasks'),
       elTab('Коллекции', '#/collections', active === 'collections'),
     );
   }

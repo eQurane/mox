@@ -136,7 +136,7 @@ app.use('/api', notificationsRouter);
     - прочее → иконка типа (через `mediaKindFromExtension`)
   - **Правая колонка (~ 35 %):** метаданные
     - Название, статус (badge), формат, дата загрузки
-    - Ссылки: Проект → `#/project/:id`, ТЗ → `#/project/:id/tasks/:taskId`, Коллекция → `#/project/:id/collections/:collectionId`
+    - Ссылки: Проект → `#/project/:id`, задание → `#/project/:id/tasks/:taskId`, Коллекция → `#/project/:id/collections/:collectionId`
     - **Описание** (Менеджер, Админ, Исполнитель): рядом с полем кнопка `edit-24.svg` → поле становится `<textarea>`, кнопка меняется на `save-24.svg` → `updateMedia(id, { description })` → откат к просмотровому режиму; Esc или клик вне поля → отмена без сохранения.
     - **Обновить** (только Менеджер/Админ): hidden `<input type="file">`, confirm при успехе → navigate to new `#/media/:newId`
     - **Удалить** (Менеджер, Админ, Исполнитель): confirm → `deleteMedia` → `#/media`

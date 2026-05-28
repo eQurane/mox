@@ -6,7 +6,7 @@ import { isExternalContractorAccountRole, sqlTaskHasContractorType } from '../ac
 const router = express.Router();
 
 const ROLES_ALL_PROJECTS = new Set(['Админ', 'Менеджер']);
-/** Создание коллекции: менеджер/админ, исполнитель или внешний подрядчик (членство и тип ТЗ — ниже). */
+/** Создание коллекции: менеджер/админ, исполнитель или внешний подрядчик (членство и тип задания — ниже). */
 const ROLES_CAN_POST_COLLECTION = new Set(['Админ', 'Менеджер', 'Исполнитель', 'Внешний подрядчик']);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -118,7 +118,7 @@ router.get('/collections', requireAuth, async (req, res) => {
     if (taskIdRaw !== undefined && taskIdRaw !== '') {
       const n = Number(taskIdRaw);
       if (!Number.isInteger(n) || n < 1) {
-        return res.status(400).json({ error: 'Некорректный идентификатор технического задания.' });
+        return res.status(400).json({ error: 'Некорректный идентификатор задания.' });
       }
       taskId = n;
     }
@@ -127,11 +127,11 @@ router.get('/collections', requireAuth, async (req, res) => {
     if (taskStatusIdRaw !== undefined && taskStatusIdRaw !== '') {
       const n = Number(taskStatusIdRaw);
       if (!Number.isInteger(n) || n < 1) {
-        return res.status(400).json({ error: 'Некорректный идентификатор статуса технического задания.' });
+        return res.status(400).json({ error: 'Некорректный идентификатор статуса задания.' });
       }
       const chk = await pool.query(`SELECT 1 FROM statuses_tasks WHERE id = $1`, [n]);
       if (chk.rows.length === 0) {
-        return res.status(400).json({ error: 'Укажите корректный статус технического задания.' });
+        return res.status(400).json({ error: 'Укажите корректный статус задания.' });
       }
       taskStatusId = n;
     }
@@ -423,7 +423,7 @@ router.post('/collections', requireAuth, async (req, res) => {
     const description = typeof req.body?.description === 'string' ? req.body.description : '';
 
     if (!Number.isInteger(taskId) || taskId < 1) {
-      return res.status(400).json({ error: 'Укажите корректное техническое задание.' });
+      return res.status(400).json({ error: 'Укажите корректное задание.' });
     }
     if (!name) {
       return res.status(400).json({ error: 'Укажите название коллекции.' });
@@ -432,12 +432,12 @@ router.post('/collections', requireAuth, async (req, res) => {
     const taskRow = await pool.query(`SELECT project_id FROM tasks WHERE id = $1`, [taskId]);
     const projectId = taskRow.rows[0]?.project_id;
     if (projectId == null) {
-      return res.status(404).json({ error: 'Техническое задание не найдено.' });
+      return res.status(404).json({ error: 'Задание не найдено.' });
     }
 
     const project = await fetchProjectDatesIfVisible(projectId, req.userId, roleName);
     if (!project) {
-      return res.status(404).json({ error: 'Техническое задание не найдено.' });
+      return res.status(404).json({ error: 'Задание не найдено.' });
     }
 
     if (isExternalContractorAccountRole(roleName)) {
@@ -446,7 +446,7 @@ router.post('/collections', requireAuth, async (req, res) => {
         [taskId],
       );
       if (scopeCheck.rows.length === 0) {
-        return res.status(404).json({ error: 'Техническое задание не найдено.' });
+        return res.status(404).json({ error: 'Задание не найдено.' });
       }
     }
 

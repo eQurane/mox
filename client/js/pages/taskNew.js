@@ -21,7 +21,7 @@ export async function renderTaskNewPage(container, projectId) {
   const main = el('main', { className: 'page register-page project-new-page' });
   const card = el('div', { className: 'register-card' });
 
-  const title = el('h1', { className: 'register-title', textContent: 'Новое техническое задание' });
+  const title = el('h1', { className: 'register-title', textContent: 'Новое задание' });
   const backBtn = el(
     'button',
     {
@@ -149,7 +149,7 @@ export async function renderTaskNewPage(container, projectId) {
   const wrapRole = el(
     'div',
     { className: 'field' },
-    el('label', { htmlFor: 'task-role', textContent: 'Роль исполнителя ТЗ' }),
+    el('label', { htmlFor: 'task-role', textContent: 'Роль исполнителя задания' }),
     roleSelect,
   );
   const wrapStatus = el(
@@ -194,7 +194,7 @@ export async function renderTaskNewPage(container, projectId) {
     wrapDeadline,
     wrapRole,
     wrapStatus,
-    el('button', { type: 'submit', className: 'button primary', textContent: 'Создать ТЗ' }),
+    el('button', { type: 'submit', className: 'button primary', textContent: 'Создать задание' }),
   );
 
   card.append(form);
@@ -243,12 +243,12 @@ export async function renderTaskNewPage(container, projectId) {
     if (invalid.length) {
       setFieldErrors([...new Set(invalid)].map((k) => fieldByKey[k]).filter(Boolean));
       let alertText = 'Проверьте поля формы.';
-      if (!name) alertText = 'Введите название технического задания.';
+      if (!name) alertText = 'Введите название задания.';
       else if (!deadlineLocal) alertText = 'Укажите дедлайн.';
       else if (deadlineBad) alertText = 'Укажите корректные дату и время дедлайна.';
       else if (deadlineRangeBad) {
         alertText = 'Дедлайн должен быть в пределах дат начала и окончания проекта.';
-      } else if (invalid.includes('roleId')) alertText = 'Выберите роль исполнителя ТЗ.';
+      } else if (invalid.includes('roleId')) alertText = 'Выберите роль исполнителя задания.';
       else if (invalid.includes('statusId')) alertText = 'Выберите статус.';
       showMessage(alertText, true);
       focusFirstInvalidKey([...new Set(invalid)]);
@@ -270,7 +270,7 @@ export async function renderTaskNewPage(container, projectId) {
       });
       location.hash = `#/project/${projectId}`;
     } catch (err) {
-      const msg = err.message || 'Не удалось создать техническое задание.';
+      const msg = err.message || 'Не удалось создать задание.';
       showMessage(msg, true);
       const mapped = fieldsForTaskApiError(msg);
       mapped.forEach((k) => fieldByKey[k]?.classList.add('field--error'));

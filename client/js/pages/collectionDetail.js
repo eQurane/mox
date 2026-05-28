@@ -186,7 +186,7 @@ export async function renderCollectionDetailPage(container, projectId, collectio
       ' · ',
       el('span', { className: 'project-detail__dates-segment' }, `Изменено: ${formatDateTimeRu(collection.lastEditedAt)}`),
     ),
-    el('p', { className: 'project-card__muted' }, 'Техническое задание: ', el('a', {
+    el('p', { className: 'project-card__muted' }, 'Задание: ', el('a', {
       className: 'project-detail__task-project-link',
       href: taskHref,
       textContent: collection.taskName ?? '—',

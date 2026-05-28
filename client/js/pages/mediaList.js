@@ -133,7 +133,7 @@ function buildMediaCard(item) {
   const mediaTop = el('div');
   attachMediaCardThumb(mediaTop, item);
 
-  // Контекстный блок: проект → ТЗ → коллекция
+  // Контекстный блок: проект → задание → коллекция
   const contextBlock = el('div', { className: 'project-card__context' });
   if (item.projectId != null) {
     contextBlock.append(
@@ -152,7 +152,7 @@ function buildMediaCard(item) {
         el('a', {
           className: 'project-card__context-link',
           href: `#/project/${encodeURIComponent(String(item.projectId))}/tasks/${encodeURIComponent(String(item.taskId))}`,
-          textContent: `ТЗ: ${item.taskName ?? '—'}`,
+          textContent: `Задание: ${item.taskName ?? '—'}`,
         }),
       ),
     );
@@ -312,9 +312,9 @@ export async function renderMediaListPage(container, searchParams) {
   const taskSelect = el('select', {
     className: 'tasks-filters__select',
     id: 'media-filter-task',
-    'aria-label': 'Фильтр по техническому заданию',
+    'aria-label': 'Фильтр по заданию',
   });
-  taskSelect.append(el('option', { value: '', textContent: 'Все технические задания' }));
+  taskSelect.append(el('option', { value: '', textContent: 'Все задания' }));
   taskSelect.disabled = true;
 
   const collectionSelect = el('select', {
@@ -361,7 +361,7 @@ export async function renderMediaListPage(container, searchParams) {
     el(
       'div',
       { className: 'tasks-filters__field' },
-      el('label', { className: 'tasks-filters__label', htmlFor: 'media-filter-task', textContent: 'Техническое задание' }),
+      el('label', { className: 'tasks-filters__label', htmlFor: 'media-filter-task', textContent: 'Задание' }),
       taskSelect,
     ),
     el(
@@ -479,11 +479,11 @@ export async function renderMediaListPage(container, searchParams) {
     taskSelect.value = '';
     if (!projectIdStr) {
       taskSelect.disabled = true;
-      taskSelect.options[0].textContent = 'Все технические задания';
+      taskSelect.options[0].textContent = 'Все задания';
       return;
     }
     taskSelect.disabled = false;
-    taskSelect.options[0].textContent = 'Все технические задания';
+    taskSelect.options[0].textContent = 'Все задания';
     try {
       const data = await fetchTasks({ projectId: projectIdStr });
       const tasks = Array.isArray(data.tasks) ? data.tasks : [];

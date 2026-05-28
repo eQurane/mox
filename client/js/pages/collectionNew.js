@@ -12,7 +12,7 @@ import {
 /**
  * @param {HTMLElement} container
  * @param {string} projectId
- * @param {string} [taskId] если из диплинка с экрана ТЗ
+ * @param {string} [taskId] если из диплинка с экрана задания
  */
 export async function renderCollectionNewPage(container, projectId, taskId) {
   container.innerHTML = '';
@@ -96,7 +96,7 @@ export async function renderCollectionNewPage(container, projectId, taskId) {
     const task = taskPayload.task ?? {};
     if (task.projectId != null && Number(task.projectId) !== Number(projectId)) {
       loading.remove();
-      showMessage('Это техническое задание относится к другому проекту.', true);
+      showMessage('Это задание относится к другому проекту.', true);
       card.append(el(
         'a',
         {
@@ -136,7 +136,7 @@ export async function renderCollectionNewPage(container, projectId, taskId) {
 
     const taskNote = el('p', {
       className: 'register-muted',
-      textContent: `Техническое задание: ${task.name ?? '—'}`,
+      textContent: `Задание: ${task.name ?? '—'}`,
     });
 
     attachClearError(nameField, [nameInput]);
@@ -206,14 +206,14 @@ export async function renderCollectionNewPage(container, projectId, taskId) {
     const isContractor = getUserSnapshot()?.roleName === 'Внешний подрядчик';
     showMessage(
       isContractor
-        ? 'Нет доступных технических заданий с типом исполнителя «Внешний подрядчик». Обратитесь к менеджеру проекта.'
-        : 'В проекте пока нет технических заданий. Сначала создайте ТЗ.',
+        ? 'Нет доступных заданий с типом исполнителя «Внешний подрядчик». Обратитесь к менеджеру проекта.'
+        : 'В проекте пока нет заданий. Сначала создайте задание.',
       true,
     );
     if (!isContractor) {
       card.append(el(
         'a',
-        { className: 'button primary', href: `#/project/${projectId}/tasks/new`, textContent: 'Добавить ТЗ' },
+        { className: 'button primary', href: `#/project/${projectId}/tasks/new`, textContent: 'Добавить задание' },
       ));
     } else {
       card.append(el(
@@ -225,9 +225,9 @@ export async function renderCollectionNewPage(container, projectId, taskId) {
   }
 
   const taskSelect = el('select', { id: 'collection-task', name: 'taskId', required: true });
-  taskSelect.append(el('option', { value: '', textContent: 'Выберите ТЗ' }));
+  taskSelect.append(el('option', { value: '', textContent: 'Выберите задание' }));
   for (const t of tasks) {
-    taskSelect.append(el('option', { value: String(t.id), textContent: t.name ?? `ТЗ ${t.id}` }));
+    taskSelect.append(el('option', { value: String(t.id), textContent: t.name ?? `Задание ${t.id}` }));
   }
 
   const nameInput = el('input', {
@@ -244,7 +244,7 @@ export async function renderCollectionNewPage(container, projectId, taskId) {
   });
 
   const taskField = el('div', { className: 'field' },
-    el('label', { className: 'field__label', htmlFor: 'collection-task', textContent: 'Техническое задание' }),
+    el('label', { className: 'field__label', htmlFor: 'collection-task', textContent: 'Задание' }),
     taskSelect,
     el('p', { className: 'field__hint field__hint--error', hidden: true }),
   );
@@ -300,7 +300,7 @@ export async function renderCollectionNewPage(container, projectId, taskId) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Не удалось создать коллекцию.';
       showMessage(msg, true);
-      if (msg.includes('ТЗ') || msg.includes('техническое задание')) {
+      if (/задани/i.test(msg)) {
         setFieldErrors([taskField]);
       } else if (msg.includes('название')) {
         setFieldErrors([nameField]);

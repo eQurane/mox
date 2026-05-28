@@ -267,7 +267,7 @@ export async function renderTasksListPage(container, searchParams) {
 
   const searchWrap = el('div', { className: 'app-header__search', role: 'search' });
   searchWrap.append(
-    el('label', { className: 'visually-hidden', htmlFor: 'task-search', textContent: 'Поиск технических заданий по названию' }),
+    el('label', { className: 'visually-hidden', htmlFor: 'task-search', textContent: 'Поиск заданий по названию' }),
     el(
       'div',
       { className: 'app-header__search-field' },
@@ -290,7 +290,7 @@ export async function renderTasksListPage(container, searchParams) {
     type: 'button',
     className: 'button button-ghost button-icon',
     title: 'Обновить список',
-    'aria-label': 'Обновить список технических заданий',
+    'aria-label': 'Обновить список заданий',
   });
   refreshBtn.append(toolbarIconImg(ICON_UPDATE));
 
@@ -493,7 +493,7 @@ export async function renderTasksListPage(container, searchParams) {
           el(
             'div',
             { className: 'projects-empty projects-empty--inline' },
-            el('p', { className: 'tasks-page__empty-text', textContent: 'Подходящих технических заданий не найдено.' }),
+            el('p', { className: 'tasks-page__empty-text', textContent: 'Подходящих заданий не найдено.' }),
           ),
         );
       } else {

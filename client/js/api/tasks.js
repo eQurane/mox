@@ -64,7 +64,7 @@ export async function fetchTaskById(id) {
   });
   const data = await parseJsonSafe(res);
   if (!res.ok) {
-    throw new Error(data.error || 'Не удалось загрузить техническое задание.');
+    throw new Error(data.error || 'Не удалось загрузить задание.');
   }
   return data;
 }
@@ -88,7 +88,7 @@ export async function updateTask(id, payload) {
   });
   const data = await parseJsonSafe(res);
   if (!res.ok) {
-    throw new Error(data.error || 'Не удалось сохранить техническое задание.');
+    throw new Error(data.error || 'Не удалось сохранить задание.');
   }
   return data;
 }
@@ -111,7 +111,7 @@ export async function createTask(payload) {
   });
   const data = await parseJsonSafe(res);
   if (!res.ok) {
-    throw new Error(data.error || 'Не удалось создать техническое задание.');
+    throw new Error(data.error || 'Не удалось создать задание.');
   }
   return data;
 }

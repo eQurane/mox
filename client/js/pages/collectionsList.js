@@ -127,7 +127,7 @@ function buildCollectionCard(col) {
     el('p', { className: 'project-card__goal', textContent: col.description || '—' }),
     el('p', {
       className: 'project-card__muted',
-      textContent: `Техническое задание: ${col.taskName ?? '—'}`,
+      textContent: `Задание: ${col.taskName ?? '—'}`,
     }),
     el('p', {
       className: 'project-card__muted',
@@ -257,9 +257,9 @@ export async function renderCollectionsListPage(container, searchParams) {
   const taskSelect = el('select', {
     className: 'tasks-filters__select',
     id: 'collection-filter-task',
-    'aria-label': 'Фильтр по техническому заданию',
+    'aria-label': 'Фильтр по заданию',
   });
-  taskSelect.append(el('option', { value: '', textContent: 'Все технические задания' }));
+  taskSelect.append(el('option', { value: '', textContent: 'Все задания' }));
   taskSelect.disabled = true;
 
   const projectStatusSelect = el('select', {
@@ -272,9 +272,9 @@ export async function renderCollectionsListPage(container, searchParams) {
   const taskStatusSelect = el('select', {
     className: 'tasks-filters__select',
     id: 'collection-filter-task-status',
-    'aria-label': 'Фильтр по статусу технического задания',
+    'aria-label': 'Фильтр по статусу задания',
   });
-  taskStatusSelect.append(el('option', { value: '', textContent: 'Все статусы технического задания' }));
+  taskStatusSelect.append(el('option', { value: '', textContent: 'Все статусы задания' }));
 
   const createdFromInput = /** @type {HTMLInputElement} */ (
     el('input', {
@@ -324,7 +324,7 @@ export async function renderCollectionsListPage(container, searchParams) {
     el(
       'div',
       { className: 'tasks-filters__field' },
-      el('label', { className: 'tasks-filters__label', htmlFor: 'collection-filter-task', textContent: 'Техническое задание' }),
+      el('label', { className: 'tasks-filters__label', htmlFor: 'collection-filter-task', textContent: 'Задание' }),
       taskSelect,
     ),
     el(
@@ -336,7 +336,7 @@ export async function renderCollectionsListPage(container, searchParams) {
     el(
       'div',
       { className: 'tasks-filters__field' },
-      el('label', { className: 'tasks-filters__label', htmlFor: 'collection-filter-task-status', textContent: 'Статус технического задания' }),
+      el('label', { className: 'tasks-filters__label', htmlFor: 'collection-filter-task-status', textContent: 'Статус задания' }),
       taskStatusSelect,
     ),
     el(
@@ -470,11 +470,11 @@ export async function renderCollectionsListPage(container, searchParams) {
     taskSelect.value = '';
     if (!projectIdStr) {
       taskSelect.disabled = true;
-      taskSelect.options[0].textContent = 'Все технические задания';
+      taskSelect.options[0].textContent = 'Все задания';
       return;
     }
     taskSelect.disabled = false;
-    taskSelect.options[0].textContent = 'Все технические задания';
+    taskSelect.options[0].textContent = 'Все задания';
     try {
       const data = await fetchTasks({ projectId: projectIdStr });
       const tasks = Array.isArray(data.tasks) ? data.tasks : [];

@@ -19,7 +19,7 @@ alwaysApply: true
 - `src/routes/auth.js` — регистрация, логин, JWT, `/auth/me`; стартовый статус регистрации из **`REGISTER_USER_STATUS`** (см. `server/.env.example`).
 - `src/routes/admin.js` — админ-API: пользователи, обзор, проблемы, крупные файлы в `storage/`, жёсткое удаление медиа.
 - `src/routes/projects.js` — список проектов, карточка (`GET /:id`), опции формы (`GET …/create-options`), создание (`POST`) и обновление (`PATCH /:id`, в т.ч. `user_project`).
-- `src/routes/tasks.js` — список ТЗ (`GET /tasks`), карточка (`GET /tasks/:id`), опции формы, создание и обновление (`GET …/create-options`, `POST /tasks`, `PATCH /tasks/:id`).
+- `src/routes/tasks.js` — список заданий (`GET /tasks`), карточка (`GET /tasks/:id`), опции формы, создание и обновление (`GET …/create-options`, `POST /tasks`, `PATCH /tasks/:id`).
 - `src/routes/collections.js` — список коллекций с фильтрами (`GET /collections`), карточка с медиа (`GET /collections/:id`), создание (`POST /collections`) и обновление (`PATCH /collections/:id`).
 - `src/routes/media.js` — список медиа с фильтрами (`GET /media`), загрузка файла (`POST /media`), карточка (`GET /media/:id`), обновление описания (`PATCH /media/:id`), soft-delete (`DELETE /media/:id`), замена файла (`POST /media/:id/replace`).
 - `src/routes/comments.js` — список комментариев к медиа (`GET /media/:mediaId/comments`) и добавление (`POST /media/:mediaId/comments`).

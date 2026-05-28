@@ -1,6 +1,6 @@
 ---
 name: "Подрядчик: коллекции UI+API"
-overview: "Разрешить внешнему подрядчику создавать коллекции только для ТЗ с типом исполнителя «Внешний подрядчик» (как при загрузке медиа): правка `POST /api/collections`, снятие блокировок роутера и карточек на страницах проекта/ТЗ, доработка пустого состояния формы и синхронизация матрицы доступа/API/UI-доков."
+overview: "Разрешить внешнему подрядчику создавать коллекции только для задания с типом исполнителя «Внешний подрядчик» (как при загрузке медиа): правка `POST /api/collections`, снятие блокировок роутера и карточек на страницах проекта/задания, доработка пустого состояния формы и синхронизация матрицы доступа/API/UI-доков."
 todos:
   - id: backend-post-collections
     content: Разрешить POST /api/collections для Внешний подрядчик + проверка sqlTaskHasContractorType по taskId
@@ -9,7 +9,7 @@ todos:
     content: "projectDetail.js, taskDetail.js: показ карточки; app.js: разрешить маршруты collections/new"
     status: completed
   - id: collection-new-empty
-    content: "collectionNew.js: пустой список ТЗ без ссылки «Добавить ТЗ» для подрядчика"
+    content: "collectionNew.js: пустой список заданий без ссылки «Добавить задание» для подрядчика"
     status: completed
   - id: docs-sync
     content: Обновить access-matrix.mdc, backend-api.mdc, frontend-architecture.mdc, report/README.md
@@ -21,7 +21,7 @@ isProject: false
 
 ## Контекст
 
-Сейчас подрядчик **не видит** карточку «Новая коллекция» на проекте и ТЗ из‑за одного флага:
+Сейчас подрядчик **не видит** карточку «Новая коллекция» на проекте и задания из‑за одного флага:
 
 ```188:189:c:\Users\eQurane\VSCode\mox\client\js\pages\projectDetail.js
   const hideNewCollectionControls =
@@ -32,9 +32,9 @@ isProject: false
 
 Даже при показе карточки маршруты **`#/project/:id/collections/new`** и **`#/project/:id/tasks/:taskId/collections/new`** в [`app.js`](c:\Users\eQurane\VSCode\mox\client\js\app.js) редиректят подрядчика на `#/home` (стр. 144–152 и 162–171).
 
-На бэкенде [`POST /api/collections`](c:\Users\eQurane\VSCode\mox\server\src\routes\collections.js) допускает только роли из `ROLES_CAN_POST_COLLECTION` (**Админ**, **Менеджер**, **Исполнитель**) — подрядчик получит **403**. Это согласуется с текущей матрицей в [`access-matrix.mdc`](c:\Users\eQurane\VSCode\mox\.cursor\rules\access-matrix.mdc), но **противоречит** продуктовой цели: подрядчик уже может **`POST /api/media`** только в коллекциях ТЗ типа подрядчика — без возможности создать коллекцию UX неполный.
+На бэкенде [`POST /api/collections`](c:\Users\eQurane\VSCode\mox\server\src\routes\collections.js) допускает только роли из `ROLES_CAN_POST_COLLECTION` (**Админ**, **Менеджер**, **Исполнитель**) — подрядчик получит **403**. Это согласуется с текущей матрицей в [`access-matrix.mdc`](c:\Users\eQurane\VSCode\mox\.cursor\rules\access-matrix.mdc), но **противоречит** продуктовой цели: подрядчик уже может **`POST /api/media`** только в коллекциях задания типа подрядчика — без возможности создать коллекцию UX неполный.
 
-Референс исполнителя: карточка **`buildSectionCreateCard`** → тот же hash, форма в [`collectionNew.js`](c:\Users\eQurane\VSCode\mox\client\js\pages\collectionNew.js); список ТЗ для селекта уже приходит от **`fetchTasks({ projectId })`**, для подрядчика на сервере действует тот же фильтр, что и в [`tasks.js`](c:\Users\eQurane\VSCode\mox\server\src\routes\tasks.js) (`contractorRestricted` + `sqlTaskHasContractorType`).
+Референс исполнителя: карточка **`buildSectionCreateCard`** → тот же hash, форма в [`collectionNew.js`](c:\Users\eQurane\VSCode\mox\client\js\pages\collectionNew.js); список заданий для селекта уже приходит от **`fetchTasks({ projectId })`**, для подрядчика на сервере действует тот же фильтр, что и в [`tasks.js`](c:\Users\eQurane\VSCode\mox\server\src\routes\tasks.js) (`contractorRestricted` + `sqlTaskHasContractorType`).
 
 ```mermaid
 flowchart LR
@@ -59,9 +59,9 @@ flowchart LR
 Файл: [`server/src/routes/collections.js`](c:\Users\eQurane\VSCode\mox\server\src\routes\collections.js).
 
 - Добавить **`Внешний подрядчик`** в множество ролей, которым разрешено создание (расширить `ROLES_CAN_POST_COLLECTION` или эквивалентно разрешить в `requireRoleForNewCollection`).
-- После того как найдены `taskId` и `projectId` и проект **виден** через существующий `fetchProjectDatesIfVisible` (членство в `user_project` для не‑админов), для аккаунта с ролью **`Внешний подрядчик`** выполнить **дополнительную проверку**, что задача относится к области подрядчика — reuse **`sqlTaskHasContractorType('t')`** в `WHERE t.id = $taskId` (как в других маршрутах). При несоответствии отвечать **`404`** «Техническое задание не найдено.» — тот же стиль, что при скрытии чужих сущностей у подрядчика.
+- После того как найдены `taskId` и `projectId` и проект **виден** через существующий `fetchProjectDatesIfVisible` (членство в `user_project` для не‑админов), для аккаунта с ролью **`Внешний подрядчик`** выполнить **дополнительную проверку**, что задача относится к области подрядчика — reuse **`sqlTaskHasContractorType('t')`** в `WHERE t.id = $taskId` (как в других маршрутах). При несоответствии отвечать **`404`** «Задание не найдено.» — тот же стиль, что при скрытии чужих сущностей у подрядчика.
 
-Так исполнитель по‑прежнему может создавать коллекции к любым ТЗ своего проекта, а подрядчик — **только** к ТЗ с `tasks.role_id` → роль «Внешний подрядчик».
+Так исполнитель по‑прежнему может создавать коллекции к любым задание своего проекта, а подрядчик — **только** к задание с `tasks.role_id` → роль «Внешний подрядчик».
 
 ## 2. Фронтенд: карточки и роутер
 
@@ -73,23 +73,23 @@ flowchart LR
 
 В сценарии **без** зафиксированного `taskId`, когда **`tasks.length === 0`**:
 
-- Сейчас показывается сообщение и кнопка «Добавить ТЗ» → `#/project/.../tasks/new` — для подрядчика это вводит в заблуждение (создание ТЗ ему запрещено).
-- Для `roleName === 'Внешний подрядчик'` заменить призыв на нейтральный текст («Нет доступных технических заданий» / «Обратитесь к менеджеру») и оставить только возврат «К проекту» без ссылки на создание ТЗ.
+- Сейчас показывается сообщение и кнопка «Добавить задание» → `#/project/.../tasks/new` — для подрядчика это вводит в заблуждение (создание задание ему запрещено).
+- Для `roleName === 'Внешний подрядчик'` заменить призыв на нейтральный текст («Нет доступных заданий» / «Обратитесь к менеджеру») и оставить только возврат «К проекту» без ссылки на создание задание.
 
-Остальная логика (селект ТЗ + создание) уже совместима: **`fetchTasks`** для подрядчика вернёт только «свои» ТЗ.
+Остальная логика (селект задание + создание) уже совместима: **`fetchTasks`** для подрядчика вернёт только «свои» задание.
 
 ## 4. Документация
 
 Привести в соответствие с поведением:
 
-- [`\.cursor\rules\access-matrix.mdc`](c:\Users\eQurane\VSCode\mox\.cursor\rules\access-matrix.mdc): строка **`POST /api/collections`** для подрядчика (⚠️ с условием: членство + тип ТЗ «Внешний подрядчик»); блок про роль подрядчика при необходимости одной фразой про создание коллекций; таблица **UI**: `#/project/:id/collections/new`, `#/project/:id/tasks/:taskId/collections/new` для подрядчика.
-- [`\.cursor\rules\backend-api.mdc`](c:\Users\eQurane\VSCode\mox\.cursor\rules\backend-api.mdc): секция **POST `/api/collections`** — доступ подрядчика и условие по типу ТЗ (аналогично **POST `/api/media`**).
+- [`\.cursor\rules\access-matrix.mdc`](c:\Users\eQurane\VSCode\mox\.cursor\rules\access-matrix.mdc): строка **`POST /api/collections`** для подрядчика (⚠️ с условием: членство + тип задания «Внешний подрядчик»); блок про роль подрядчика при необходимости одной фразой про создание коллекций; таблица **UI**: `#/project/:id/collections/new`, `#/project/:id/tasks/:taskId/collections/new` для подрядчика.
+- [`\.cursor\rules\backend-api.mdc`](c:\Users\eQurane\VSCode\mox\.cursor\rules\backend-api.mdc): секция **POST `/api/collections`** — доступ подрядчика и условие по типу задания (аналогично **POST `/api/media`**).
 - [`\.cursor\rules\frontend-architecture.mdc`](c:\Users\eQurane\VSCode\mox\.cursor\rules\frontend-architecture.mdc): строки про **`#/project/:id`** и **`#/project/:id/tasks/:taskId`** и маршруты **`collections/new`** — указать подрядчика там, где сейчас только исполнитель.
 - [`report/README.md`](c:\Users\eQurane\VSCode\mox\report\README.md): таблица ролей и строка про **`POST /api/collections`** (сейчас для подрядчика стоит «—»).
 
 ## 5. Проверка вручную (после реализации)
 
-- Под пользователем **Внешний подрядчик**, членом проекта: на карточке проекта видна «Новая коллекция», форма открывается, в списке ТЗ только ТЗ с типом подрядчика; создание успешно, переход на карточку коллекции.
-- С экрана **конкретного** такого ТЗ — карточка «Новая коллекция», тот же успешный сценарий.
+- Под пользователем **Внешний подрядчик**, членом проекта: на карточке проекта видна «Новая коллекция», форма открывается, в списке задание только задания с типом подрядчика; создание успешно, переход на карточку коллекции.
+- С экрана **конкретного** такого задания — карточка «Новая коллекция», тот же успешный сценарий.
 - Прямой вызов API с `taskId` «чужого» типа исполнителя (если id известен) — **404**, коллекция не создаётся.
 - **Клиент** по-прежнему без карточек и без доступа к API.

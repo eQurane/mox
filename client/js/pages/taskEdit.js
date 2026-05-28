@@ -27,14 +27,14 @@ export async function renderTaskEditPage(container, projectId, taskId) {
   );
   const card = el('div', { className: 'register-card' });
 
-  const title = el('h1', { className: 'register-title', textContent: 'Редактирование технического задания' });
+  const title = el('h1', { className: 'register-title', textContent: 'Редактирование задания' });
   const backBtn = el(
     'button',
     {
       type: 'button',
       className: 'button button-ghost button-icon',
-      'aria-label': 'Назад к техническому заданию',
-      title: 'Назад к ТЗ',
+      'aria-label': 'Назад к заданию',
+      title: 'Назад к заданию',
     },
     el('img', {
       className: 'header-toolbar__icon',
@@ -88,7 +88,7 @@ export async function renderTaskEditPage(container, projectId, taskId) {
     showMessage(err.message || 'Не удалось загрузить данные.', true);
     card.append(el(
       'a',
-      { className: 'button button-ghost', href: `#/project/${projectId}/tasks/${taskId}`, textContent: 'К ТЗ' },
+      { className: 'button button-ghost', href: `#/project/${projectId}/tasks/${taskId}`, textContent: 'К заданию' },
     ));
     return;
   }
@@ -96,7 +96,7 @@ export async function renderTaskEditPage(container, projectId, taskId) {
   const task = payload.task ?? {};
   if (task.projectId != null && Number(task.projectId) !== Number(projectId)) {
     loading.remove();
-    showMessage('Это техническое задание относится к другому проекту.', true);
+    showMessage('Это задание относится к другому проекту.', true);
     card.append(el(
       'a',
       {
@@ -182,7 +182,7 @@ export async function renderTaskEditPage(container, projectId, taskId) {
   const wrapRole = el(
     'div',
     { className: 'field' },
-    el('label', { htmlFor: 'task-role-edit', textContent: 'Роль исполнителя ТЗ' }),
+    el('label', { htmlFor: 'task-role-edit', textContent: 'Роль исполнителя задания' }),
     roleSelect,
   );
   const wrapStatus = el(
@@ -290,12 +290,12 @@ export async function renderTaskEditPage(container, projectId, taskId) {
     if (invalid.length) {
       setFieldErrors([...new Set(invalid)].map((k) => fieldByKey[k]).filter(Boolean));
       let alertText = 'Проверьте поля формы.';
-      if (!name) alertText = 'Введите название технического задания.';
+      if (!name) alertText = 'Введите название задания.';
       else if (!deadlineLocal) alertText = 'Укажите дедлайн.';
       else if (deadlineBad) alertText = 'Укажите корректные дату и время дедлайна.';
       else if (deadlineRangeBad) {
         alertText = 'Дедлайн должен быть в пределах дат начала и окончания проекта.';
-      } else if (invalid.includes('roleId')) alertText = 'Выберите роль исполнителя ТЗ.';
+      } else if (invalid.includes('roleId')) alertText = 'Выберите роль исполнителя задания.';
       else if (invalid.includes('statusId')) alertText = 'Выберите статус.';
       showMessage(alertText, true);
       focusFirstInvalidKey([...new Set(invalid)]);
@@ -314,7 +314,7 @@ export async function renderTaskEditPage(container, projectId, taskId) {
       });
       location.hash = `#/project/${projectId}/tasks/${taskId}`;
     } catch (err) {
-      const msg = err.message || 'Не удалось сохранить техническое задание.';
+      const msg = err.message || 'Не удалось сохранить задание.';
       showMessage(msg, true);
       const mapped = fieldsForTaskApiError(msg);
       mapped.forEach((k) => fieldByKey[k]?.classList.add('field--error'));

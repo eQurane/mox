@@ -519,7 +519,7 @@ export function renderAdminPage(container, searchParams = new URLSearchParams())
         const grid = el('div', { className: 'admin-overview-grid' });
         grid.append(
           cardNum('Проекты', o.projectCount),
-          cardNum('Технические задания', o.taskCount),
+          cardNum('Задания', o.taskCount),
           cardNum('Коллекции', o.collectionCount),
         );
         wrap.append(grid);
@@ -583,7 +583,7 @@ export function renderAdminPage(container, searchParams = new URLSearchParams())
           wrap.append(plist);
         }
 
-        wrap.append(el('h3', { className: 'admin-detail__subtitle', textContent: 'ТЗ без коллекций' }));
+        wrap.append(el('h3', { className: 'admin-detail__subtitle', textContent: 'Задания без коллекций' }));
         if (!i.tasksWithoutCollections?.length) wrap.append(el('p', { className: 'register-muted', textContent: 'Нет.' }));
         else {
           const plist = el('div', { className: 'admin-plain-list' });

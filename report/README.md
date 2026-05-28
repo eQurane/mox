@@ -11,19 +11,22 @@
 7. [REST API](#7-rest-api)
 8. [Поток аутентификации](#8-поток-аутентификации)
 
+См. также [диаграмма потока экрана «Проекты»](diagramm.md).
+
 ---
 
 ## 1. Общее описание
 
-**Mox** — веб-платформа для управления проектами с медиаконтентом. Система позволяет организовывать работу над проектами: создавать технические задания, группировать медиафайлы в коллекции, оставлять комментарии и получать уведомления об активности.
+**Mox** — веб-платформа для управления проектами с медиаконтентом. Система позволяет организовывать работу над проектами: создавать задания, группировать медиафайлы в коллекции, оставлять комментарии и получать уведомления об активности.
 
 **Ключевые возможности:**
 
-- Управление проектами, техническими заданиями и коллекциями
+- Управление проектами, заданиями и коллекциями
 - Загрузка, замена и архивирование медиафайлов (изображения, видео, аудио, документы)
 - Комментирование медиа участниками проекта
 - Ролевая модель доступа с гибкими ограничениями по видимости
-- Уведомления о новых комментариях в реальном времени (polling)
+- Уведомления о новых комментариях (polling каждые 30 с)
+- Админ-панель: пользователи и статусы, обзор и «проблемы» данных, большие файлы в `storage/`, безвозвратное удаление медиа
 
 **Технологический стек:**
 
@@ -58,7 +61,7 @@ graph TD
     subgraph Server["🖥️ Сервер (Node.js / Express)"]
         ServerJS["server.js\nточка входа"]
         Middleware["middleware/auth.js\njwt.verify"]
-        Routes["routes/*.js\nauth, projects, tasks,\ncollections, media,\ncomments, notifications"]
+        Routes["routes/*.js\nauth, projects, tasks,\ncollections, media,\ncomments, notifications,\nadmin"]
 
         ServerJS --> Middleware
         Middleware --> Routes
@@ -101,17 +104,21 @@ server/
 │   ├── db.js                 ← пул подключений PostgreSQL (pg.Pool)
 │   ├── paths.js              ← абсолютный путь к storage/
 │   ├── jwtSecret.js          ← JWT_SECRET и JWT_EXPIRES_IN из env
+│   ├── access/
+│   │   └── contractorTaskScope.js  ← фильтрация цепочек заданий для «Внешнего подрядчика»
 │   ├── middleware/
-│   │   └── auth.js           ← bearerToken + requireAuth
+│   │   ├── auth.js           ← bearerToken + requireAuth (JWT → req.userId, req.roleId)
+│   │   └── requireAdmin.js   ← после requireAuth: только роль «Админ»
 │   └── routes/
 │       ├── health.js         ← GET /api/health, /api/health/db
 │       ├── auth.js           ← register, login, /auth/me
 │       ├── projects.js       ← CRUD проектов + create-options
-│       ├── tasks.js          ← CRUD ТЗ + create-options
+│       ├── tasks.js          ← CRUD заданий + create-options
 │       ├── collections.js    ← CRUD коллекций
 │       ├── media.js          ← загрузка, замена, soft-delete
 │       ├── comments.js       ← комментарии к медиа
-│       └── notifications.js  ← уведомления (derived query)
+│       ├── notifications.js   ← уведомления (derived query)
+│       └── admin.js         ← пользователи, обзор, проблемы, большие файлы, жёсткое удаление медиа
 └── db_init/
     └── init.js               ← создание БД, схемы, seed справочников
 ```
@@ -134,6 +141,7 @@ graph LR
 
     subgraph MW["Middleware"]
         Auth["auth.js\nbearerToken\nrequireAuth"]
+        RequireAdmin["requireAdmin.js\nроль из БД"]
     end
 
     subgraph Routes["Роутеры /api"]
@@ -145,6 +153,7 @@ graph LR
         Media["media.js"]
         Comments["comments.js"]
         Notif["notifications.js"]
+        Admin["admin.js"]
     end
 
     ServerJS --> DB
@@ -159,6 +168,7 @@ graph LR
     ServerJS --> Media
     ServerJS --> Comments
     ServerJS --> Notif
+    ServerJS --> Admin
 
     Auth --> JWT
     Projects --> DB
@@ -169,18 +179,26 @@ graph LR
     Comments --> DB
     Notif --> DB
     AuthR --> DB
+    Admin --> DB
+    Admin --> Paths
+    Admin --> RequireAdmin
+    RequireAdmin --> Auth
+    RequireAdmin --> DB
 ```
+
+На маршрутах **`/api/admin/…`** для каждого обработчика задаётся цепочка **`requireAuth` → `requireAdmin`** в **`admin.js`** (роль «Админ» проверяется по БД в **`requireAdmin`**).
 
 ### Переменные окружения (`server/.env`)
 
 | Переменная | Назначение |
 |---|---|
 | `PORT` | Порт сервера (по умолчанию `3000`) |
-| `DATABASE_HOST` / `_PORT` / `_NAME` / `_USER` / `_PASSWORD` | Параметры PostgreSQL |
+| `NODE_ENV` | В `production` без `JWT_SECRET` процесс завершается при старте (`jwtSecret.js`) |
+| `DATABASE_HOST` / `_PORT` / `_NAME` / `_USER` / `_PASSWORD` | Параметры PostgreSQL (имя БД по умолчанию в коде инициализации — `mox`) |
 | `JWT_SECRET` | Секрет подписи JWT (обязателен в production) |
 | `JWT_EXPIRES_IN` | Срок жизни токена (по умолчанию `7d`) |
-| `REGISTER_USER_STATUS` | Статус нового пользователя (по умолчанию `Активный`) |
-| `INIT_DATE` | Нижняя граница дат для валидации (по умолчанию `2026-05-01`) |
+| `REGISTER_USER_STATUS` | **Обязательна:** точное имя строки из `statuses_users` для `POST /api/auth/register` (см. `server/.env.example`: модерация — «На подтверждении», локальный dev без очереди — «Активный») |
+| `INIT_DATE` | Нижняя граница дат в CHECK схемы и при валидации проектов/заданий (по умолчанию в `db_init` — `2026-05-01`) |
 
 ### Поток авторизации запроса
 
@@ -234,6 +252,7 @@ client/
     │   ├── collections.js    ← fetchCollections, fetchCollectionById, …
     │   ├── media.js          ← fetchMedia, uploadMedia, replaceMedia,
     │   │                       updateMedia, deleteMedia, …
+    │   ├── admin.js          ← пользователи, approve, overview, большие файлы, hard-delete медиа
     │   ├── comments.js       ← fetchComments, addComment
     │   └── notifications.js  ← fetchNotifications
     ├── utils/
@@ -249,7 +268,7 @@ client/
         ├── collectionsList.js / collectionNew.js
         │   collectionEdit.js / collectionDetail.js
         ├── mediaList.js / mediaNew.js / mediaDetail.js
-        └── projectFormShared.js / taskFormShared.js
+        └── projectFormStub.js / projectFormShared.js / taskFormShared.js
 ```
 
 ### Схема модулей клиента
@@ -278,6 +297,7 @@ graph TD
         ATasks["tasks.js"]
         AColls["collections.js"]
         AMedia["media.js"]
+        AAdmin["admin.js"]
         AComm["comments.js"]
         ANotif["notifications.js"]
         AAuth["auth.js"]
@@ -409,7 +429,7 @@ graph LR
         ManageOwn["Все проекты\n+ создание/редактирование"]
         ViewOwn["Свои проекты\n+ медиа и комментарии\n+ загрузка контента"]
         ClientAccess["Свои проекты\n+ просмотр медиа и комментарии"]
-        ContractorScope["Свои проекты\n+ цепочка ТЗ подрядчика"]
+        ContractorScope["Свои проекты\n+ цепочка заданий подрядчика"]
         None["Нет доступа"]
     end
 
@@ -425,18 +445,19 @@ graph LR
 | Действие | Админ | Менеджер | Исполнитель | Клиент | Внеш. |
 |---|:---:|:---:|:---:|:---:|:---:|
 | Просмотр всех проектов | ✓ | ✓ | — | — | — |
-| Просмотр своих проектов | ✓ | ✓ | ✓ | ✓ | — |
+| Просмотр своих проектов (членство `user_project`, у подрядчика контент ограничен типом задания) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Создание / редактирование проекта | ✓ | ✓ | — | — | — |
-| Просмотр ТЗ / коллекций (глобальные списки и API списков) | ✓ | ✓ | ✓ | — | — |
+| Просмотр задание / коллекций (глобальные списки и API списков) | ✓ | ✓ | ✓ | — | — |
 | Просмотр медиа и карточки медиа (при членстве в проекте) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Создание ТЗ | ✓ | ✓ | — | — | — |
-| Создание коллекции (`POST /api/collections`, член проекта; подрядчик — только ТЗ типа подрядчик) | ✓ | ✓ | ✓ | — | ✓ |
+| Создание задания | ✓ | ✓ | — | — | — |
+| Создание коллекции (`POST /api/collections`, член проекта; подрядчик — только задания типа подрядчик) | ✓ | ✓ | ✓ | — | ✓ |
 | Загрузка медиа (`POST /api/media`) | ✓ | ✓ | ✓ | — | — |
 | Редактирование описания медиа | ✓ | ✓ | ✓ | — | — |
 | Soft-delete медиа | ✓ | ✓ | ✓ | — | — |
 | Замена файла медиа | ✓ | ✓ | — | — | — |
 | Комментарии к медиа | ✓ | ✓ | ✓ | ✓ | — |
 | Уведомления (колокольчик) | ✓ | ✓ | — | — | — |
+| Админ-API (`GET/PATCH/POST/DELETE /api/admin/…`) | ✓ | — | — | — | — |
 | Раздел `/admin` | ✓ | — | — | — | — |
 | Назначить Менеджера участником | ✓ | — | — | — | — |
 
@@ -457,19 +478,19 @@ graph LR
 | GET | `/api/projects` | Список проектов | Bearer |
 | GET | `/api/projects/create-options` | Справочники для формы | Bearer, Админ/Менеджер |
 | POST | `/api/projects` | Создать проект | Bearer, Админ/Менеджер |
-| GET | `/api/projects/:id` | Карточка проекта (с ТЗ, коллекциями, медиа) | Bearer |
+| GET | `/api/projects/:id` | Карточка проекта (с задания, коллекциями, медиа) | Bearer |
 | PATCH | `/api/projects/:id` | Обновить проект | Bearer, Админ/Менеджер |
-| GET | `/api/tasks` | Список ТЗ (с фильтрами) | Bearer |
-| GET | `/api/tasks/create-options` | Справочники для формы ТЗ | Bearer, Админ/Менеджер |
-| POST | `/api/tasks` | Создать ТЗ | Bearer, Админ/Менеджер |
-| GET | `/api/tasks/:id` | Карточка ТЗ | Bearer |
-| PATCH | `/api/tasks/:id` | Обновить ТЗ | Bearer, Админ/Менеджер |
+| GET | `/api/tasks` | Список задание (с фильтрами) | Bearer |
+| GET | `/api/tasks/create-options` | Справочники для формы задания | Bearer, Админ/Менеджер |
+| POST | `/api/tasks` | Создать задание | Bearer, Админ/Менеджер |
+| GET | `/api/tasks/:id` | Карточка задания | Bearer |
+| PATCH | `/api/tasks/:id` | Обновить задание | Bearer, Админ/Менеджер |
 | GET | `/api/collections` | Список коллекций (с фильтрами) | Bearer |
-| POST | `/api/collections` | Создать коллекцию | Bearer, Админ/Менеджер/Исполнитель/Внешний подрядчик (ТЗ типа подрядчик) |
+| POST | `/api/collections` | Создать коллекцию | Bearer, Админ/Менеджер/Исполнитель/Внешний подрядчик (задания типа подрядчик) |
 | GET | `/api/collections/:id` | Карточка коллекции (с медиа) | Bearer |
 | PATCH | `/api/collections/:id` | Обновить коллекцию | Bearer, Админ/Менеджер |
 | GET | `/api/media` | Список медиа (с фильтрами) | Bearer |
-| POST | `/api/media` | Загрузить файл (multipart) | Bearer, Админ/Менеджер/Исполнитель/подрядчик |
+| POST | `/api/media` | Загрузить файл (multipart) | Bearer, Админ/Менеджер/Исполнитель/Внешний подрядчик |
 | GET | `/api/media/:id` | Карточка медиа | Bearer |
 | PATCH | `/api/media/:id` | Обновить описание | Bearer, Мен/Адм/Исп |
 | DELETE | `/api/media/:id` | Soft-delete → статус «Удалённый» | Bearer, Мен/Адм/Исп |
@@ -477,6 +498,15 @@ graph LR
 | GET | `/api/media/:id/comments` | Список комментариев | Bearer, не подрядчик; Клиент допускается |
 | POST | `/api/media/:id/comments` | Добавить комментарий | Bearer, не подрядчик; Клиент допускается |
 | GET | `/api/notifications` | Последние комментарии по проектам | Bearer, Админ/Менеджер |
+| GET | `/api/admin/users` | Список пользователей (фильтры `q`, статус, роль, пагинация) | Bearer, только Админ |
+| GET | `/api/admin/users/:id` | Карточка пользователя и проекты | Bearer, только Админ |
+| PATCH | `/api/admin/users/:id` | Обновление роли и/или статуса | Bearer, только Админ |
+| POST | `/api/admin/users/:id/approve` | Перевести «На подтверждении» → «Активный» | Bearer, только Админ |
+| DELETE | `/api/admin/users/:id` | Удалить учётную запись (ограничения на сервере) | Bearer, только Админ |
+| GET | `/api/admin/overview` | Сводка по БД | Bearer, только Админ |
+| GET | `/api/admin/issues` | Проблемные данные (проекты без участников и т.д.) | Bearer, только Админ |
+| GET | `/api/admin/storage/large-files` | Файлы в `storage/` больше 50 МБ | Bearer, только Админ |
+| DELETE | `/api/admin/media/:id` | Жёсткое удаление медиа и файла на диске | Bearer, только Админ |
 
 ---
 
@@ -500,13 +530,13 @@ sequenceDiagram
     S->>DB: SELECT user WHERE email = ?
     S->>S: bcryptjs.compare(password, hash)
     S->>S: Проверка статуса «Активный»
-    S->>S: jwt.sign({userId, roleId})
+    S->>S: JWT: sub=id пользователя, roleId из БД
     S-->>B: 200 {token, user}
     B->>B: sessionStorage: mox_token, mox_user
 
     Note over B,DB: Защищённый запрос
     B->>S: GET /api/projects\nAuthorization: Bearer token
-    S->>S: jwt.verify(token) → userId, roleId
+    S->>S: jwt.verify → userId из sub, roleId
     S->>DB: SELECT projects (с фильтром по роли)
     S-->>B: 200 {projects: [...]}
 

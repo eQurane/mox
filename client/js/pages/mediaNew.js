@@ -217,7 +217,7 @@ export async function renderMediaNewPage(container, projectId, searchParams) {
     sel.append(el('option', { value: '', textContent: 'Выберите коллекцию' }));
     for (const c of collections) {
       const labelParts = [c.name ?? `Коллекция ${c.id}`];
-      if (c.taskName) labelParts.push(`ТЗ: ${c.taskName}`);
+      if (c.taskName) labelParts.push(`Задание: ${c.taskName}`);
       sel.append(
         el('option', {
           value: String(c.id),
