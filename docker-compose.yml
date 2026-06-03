@@ -33,12 +33,14 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - DB_HOST=postgres_db
+      - DATABASE_HOST=postgres_db
       - DATABASE_USER=${DATABASE_USER:-postgres}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD:-secret_password}
       - DATABASE_NAME=${DATABASE_NAME:-mox_db}
-      - DB_PORT=5432
+      - DATABASE_PORT=5432
       - JWT_SECRET=${JWT_SECRET:-some_random_jwt_secret_key}
+      - INIT_DATE=2026-05-01
+      - REGISTER_USER_STATUS=На подтверждении
     volumes:
       # Сохраняем загружаемые файлы на хост-машине
       - ./server/storage:/app/server/storage
