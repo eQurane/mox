@@ -1,0 +1,51 @@
+services:
+  # 1. База данных PostgreSQL с автоматическим накатыванием дампа
+  postgres_db:
+    image: postgres:latest
+    container_name: mox_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-secret_password}
+      POSTGRES_DB: ${DATABASE_NAME:-mox_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      # Постоянное хранилище данных (чтобы они не пропадали при перезапуске)
+      - pgdata:/var/lib/postgresql/data
+      # Магия дампа: монтируем папку с sql-файлом. Контейнер выполнит его при первом старте.
+      - ./db_dump:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres} -d ${DATABASE_NAME:-mox_db}"]
+      interval: 3s
+      timeout: 10s
+      retries: 5
+
+  # 2. Основной сервер (Express + Client статика)
+  express_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mox_server
+    restart: always
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_HOST=postgres_db
+      - DATABASE_USER=${DATABASE_USER:-postgres}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-secret_password}
+      - DATABASE_NAME=${DATABASE_NAME:-mox_db}
+      - DB_PORT=5432
+      - JWT_SECRET=${JWT_SECRET:-some_random_jwt_secret_key}
+    volumes:
+      # Сохраняем загружаемые файлы на хост-машине
+      - ./server/storage:/app/server/storage
+    depends_on:
+      postgres_db:
+        condition: service_healthy # Сервер запустится только КОГДА база полностью развернет дамп
+
+volumes:
+  pgdata:
+  mox_storage:

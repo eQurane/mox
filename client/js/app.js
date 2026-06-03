@@ -1,6 +1,7 @@
 import { isLoggedIn, getUserSnapshot } from './auth/session.js';
 import { renderHomePage } from './pages/home.js';
 import { renderLoginPage } from './pages/login.js';
+import { renderLoginSpecialPage } from './pages/loginSpecial.js';
 import { renderRegisterPage } from './pages/register.js';
 import { renderAdminPage } from './pages/admin.js';
 import { renderProjectNewPage } from './pages/projectNew.js';
@@ -68,6 +69,17 @@ function route() {
     renderLoginPage(appRoot);
     return;
   }
+
+  if (normalized === 'login-special' && isLoggedIn()) {
+    history.replaceState(null, '', '#/home');
+    renderHomePage(appRoot);
+    return;
+  }
+  if (normalized === 'login-special') {
+    renderLoginSpecialPage(appRoot);
+    return;
+  }
+
   if (normalized === 'register') {
     renderRegisterPage(appRoot);
     return;

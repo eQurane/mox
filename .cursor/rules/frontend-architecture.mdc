@@ -38,8 +38,9 @@ alwaysApply: false
 
 ### Гость vs авторизованный
 
-- **Без токена:** доступны `login`, `register`; при попытке зайти на защищённый маршрут — `#/login`.
-- **С токеном:** при открытии `#/login` — редирект на `#/home`.
+- **Без токена:** доступны `login`, `login-special`, `register`; при попытке зайти на защищённый маршрут — `#/login`.
+- **С токеном:** при открытии `#/login` или `#/login-special` — редирект на `#/home`.
+- **`#/login-special` (`loginSpecial.js`):** тот же `POST /api/auth/login`, что `#/login`; список демо-аккаунтов с кнопкой «Подставить»; ссылка «Обычный вход» → `#/login`.
 
 ### Ограничения по ролям (снимок из `sessionStorage`)
 
@@ -86,6 +87,7 @@ client/
       collectionsList.js
       mediaList.js
       login.js
+      loginSpecial.js
       register.js
       admin.js
       projectNew.js

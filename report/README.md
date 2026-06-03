@@ -13,6 +13,8 @@
 
 См. также [диаграмма потока экрана «Проекты»](diagramm.md), [диаграмма развёртывания](deployment.md).
 
+**Быстрый старт** (установка, `.env`, демо-аккаунты): [README в корне репозитория](../README.md).
+
 ---
 
 ## 1. Общее описание
@@ -261,7 +263,7 @@ client/
     ├── nav/
     │   └── dashboardTabs.js  ← шапка с вкладками
     └── pages/
-        ├── login.js / register.js
+        ├── login.js / loginSpecial.js / register.js
         ├── home.js / admin.js
         ├── projectNew.js / projectEdit.js / projectDetail.js
         ├── tasksList.js / taskNew.js / taskEdit.js / taskDetail.js
@@ -288,7 +290,7 @@ graph TD
         Tasks["tasksList / taskNew\ntaskEdit / taskDetail"]
         Colls["collectionsList / collectionNew\ncollectionEdit / collectionDetail"]
         Media["mediaList / mediaNew\nmediaDetail"]
-        Auth["login.js / register.js"]
+        Auth["login.js / loginSpecial.js / register.js"]
         Admin["admin.js"]
     end
 
@@ -318,6 +320,8 @@ graph TD
 ```
 
 ### Роутинг и защита маршрутов
+
+Публичные экраны: **`#/login`**, **`#/register`**, **`#/login-special`** (`loginSpecial.js` — демо-вход с подстановкой тестовых учётных данных).
 
 ```mermaid
 flowchart TD
@@ -511,6 +515,8 @@ graph LR
 ---
 
 ## 8. Поток аутентификации
+
+**Гостевые маршруты SPA:** `#/login`, `#/register`, `#/login-special` (демо-вход со списком тестовых аккаунтов; при уже активной сессии — редирект на `#/home`). Защищённые маршруты без токена перенаправляют на `#/login`.
 
 ```mermaid
 sequenceDiagram

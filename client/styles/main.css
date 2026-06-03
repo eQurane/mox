@@ -79,6 +79,82 @@ body {
   color: var(--text);
 }
 
+.login-special-page .login-special-card {
+  max-width: min(640px, 100%);
+}
+
+.login-special-accounts {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.login-special-accounts__title {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.login-special-accounts__hint {
+  margin-bottom: 12px;
+}
+
+.login-special-accounts__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.login-special-accounts__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.login-special-accounts__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 200px;
+}
+
+.login-special-accounts__role {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.login-special-accounts__email {
+  font-size: 0.9rem;
+  word-break: break-all;
+}
+
+.login-special-accounts__password {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.login-special-accounts__fill {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+@media (max-width: 480px) {
+  .login-special-accounts__meta {
+    overflow-x: auto;
+  }
+}
+
 .register-muted {
   margin: 0 0 16px;
   color: var(--muted);
