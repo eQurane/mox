@@ -1,10 +1,10 @@
 # --- Этап 1: Сборка зависимостей ---
-FROM node:24-alpine AS builder
+FROM node:24-slim AS builder
 WORKDIR /app
 
 # Копируем production-зависимости бэкенда
 COPY server/package*.json ./server/
-RUN cd server && npm ci --only=production
+RUN cd server && npm ci --omit=dev && npm cache clean --force
 
 # Копируем код сервера и клиента
 COPY server/ ./server/
@@ -14,7 +14,7 @@ COPY client/ ./client/
 RUN mkdir -p server/storage
 
 # --- Этап 2: Финальный запуск ---
-FROM node:24-alpine
+FROM node:24-slim
 
 WORKDIR /app
 
