@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Копируем production-зависимости бэкенда
 COPY server/package*.json ./server/
-RUN cd server && npm ci --omit=dev && npm cache clean --force
+RUN cd server && npm install --omit=dev && npm cache clean --force
 
 # Копируем код сервера и клиента
 COPY server/ ./server/
