@@ -12,7 +12,7 @@ services:
       - "5432:5432"
     volumes:
       # Постоянное хранилище данных (чтобы они не пропадали при перезапуске)
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql
       # Магия дампа: монтируем папку с sql-файлом. Контейнер выполнит его при первом старте.
       - ./db_dump:/docker-entrypoint-initdb.d
     healthcheck:
